@@ -56,6 +56,20 @@ function Messages.ForError(code: any): string
 	return Messages.Errors[key] or code
 end
 
+-- War Zone (WarZoneService / WarZoneController)
+Messages.War = {
+	Joined = "You joined %s. Stand on the control points to take them.",
+	Left = "You left the War Zone.",
+	Captured = "%s took point %s",
+	Neutralized = "Point %s is neutral",
+	Won = "%s wins the round!",
+	Draw = "Draw! Nobody wins this round.",
+	RoundStart = "New round. Take the points!",
+	NoRewards = "No rewards this round: both teams need players.",
+	Intermission = "NEXT ROUND IN %d",
+	Title = "WAR ZONE",
+}
+
 -- Points of interest
 Messages.Poi = {
 	SupplierPrompt = "Browse parts",

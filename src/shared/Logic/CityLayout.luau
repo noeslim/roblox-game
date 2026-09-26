@@ -38,6 +38,14 @@ export type Layout = {
 	pois: { Poi },
 	customerSpawns: { Poi },
 	wires: { Wire },
+	-- the War Zone for the game logic (WarZoneService): playable area, control points, team spawns
+	warZone: WarZone?,
+}
+export type WarZone = {
+	rect: Rect,
+	points: { { label: string, x: number, z: number } },
+	red: { x: number, z: number },
+	blue: { x: number, z: number },
 }
 
 -- Deterministic PRNG (Park-Miller). Random is not available in pure Lune code.
@@ -496,6 +504,12 @@ function CityLayout.Build(cfg: any): Layout
 		table.insert(keepOut, rect(rx - 45, rz - 45, rx + 45, rz + 45))
 		table.insert(keepOut, rect(bx - 45, bz - 45, bx + 45, bz + 45))
 		table.insert(layout.pois, { name = "WarZone", x = mx, z = mz })
+		local points = {}
+		for _, cp in W.ControlPoints do
+			local x, z = at(cp.x, cp.z)
+			table.insert(points, { label = cp.label, x = x, z = z })
+		end
+		layout.warZone = { rect = interior, points = points, red = { x = rx, z = rz }, blue = { x = bx, z = bz } }
 
 		local function free(r: Rect): boolean
 			if r.x0 < interior.x0 + 6 or r.x1 > interior.x1 - 6 or r.z0 < interior.z0 + 6 or r.z1 > interior.z1 - 6 then

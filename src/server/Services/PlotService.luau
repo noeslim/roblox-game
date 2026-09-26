@@ -53,6 +53,9 @@ function PlotService.GetSpawnCFrame(plot: Instance): CFrame
 end
 
 local function bringCharacter(player: Player, plot: Instance)
+	if player:GetAttribute("WarTeam") ~= nil then
+		return -- in a War Zone round: WarZoneService respawns them in their bunker
+	end
 	local character = player.Character
 	if character and character.PrimaryPart then
 		character:PivotTo(PlotService.GetSpawnCFrame(plot))

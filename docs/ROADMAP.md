@@ -36,8 +36,8 @@ Légende coût : 🟢 petit · 🟡 moyen · 🔴 gros (mérite Opus)
 ## Phase M — La map et les trap houses (à faire maintenant : tout le reste s'appuie dessus)
 - ✅ M.1 🔴 Générateur de ville (3 × 3 quartiers, routes, trottoirs, immeubles modulaires en meshes), construit une fois dans Studio, StreamingEnabled.
 - ✅ M.2 🔴 Trap house : maison extérieure en meshes, rez-de-chaussée, escalier, **sous-sol constructible**. Migration des terrains actuels vers les sous-sols. Chemin des clients porte → escalier → comptoir.
-- M.3 🟡 Points d'intérêt : spawn Downtown, commissariat, entrepôt fournisseur, ruelle du marché noir, station-service.
-- M.4 🟡 War Zone : clôtures, couverts, 5 points de contrôle, spawns Rouge / Bleu.
+- ✅ M.3 🟡 Points d'intérêt (à valider dans Studio) : fournisseur (sans frais sur place, +35 % par téléphone), marché noir de nuit (stock qui change chaque nuit), station-service (soin + endurance), repères à l'écran avec distance.
+- ✅ M.4 🟡 War Zone (à valider dans Studio) : équipes Rouge / Bleu équilibrées en entrant, capture par présence, score, manches, récompenses (seulement si les deux équipes ont des joueurs), réapparition au bunker. Le combat arrive avec la phase 3.
 
 ## Phase R — Recrutement (après la phase 2)
 - R.1 🟡 MissionService générique + logique pure testée.
