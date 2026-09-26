@@ -10,6 +10,7 @@ local Config = script.Parent.Parent:WaitForChild("Config")
 local Visual = require(Config:WaitForChild("Visual"))
 local Economy = require(Config:WaitForChild("Economy"))
 local MeshLibrary = require(Config:WaitForChild("MeshLibrary"))
+local AxisFit = require(script.Parent.Parent:WaitForChild("Logic"):WaitForChild("AxisFit"))
 
 local ModelFactory = {}
 
@@ -93,8 +94,11 @@ local function loadLibrary(): { [string]: { MeshTemplate } }?
 		return nil
 	end
 	local scale = 1 / anchor.Size.X -- the origin cube is 1x1x1 stud in the file
-	local found: { [string]: { MeshTemplate } } = {}
-	local count, moved, fixed = 0, 0, 0
+
+	-- 1. every library mesh: where the importer put it (in the origin cube's frame, rescaled) and where
+	-- the generator says it belongs (MeshLibrary.Parts + the model's offset in the file)
+	type Entry = { d: MeshPart, assetId: string, mat: string, rel: CFrame, imported: Vector3, expected: Vector3?, box: any, offset: Vector3 }
+	local entries: { Entry } = {}
 	for _, d in root:GetDescendants() do
 		if d:IsA("MeshPart") and d ~= anchor then
 			local assetId, mat = string.match(d.Name, "^(.-)__(.+)$")
@@ -102,48 +106,88 @@ local function loadLibrary(): { [string]: { MeshTemplate } }?
 			if info and mat and MeshLibrary.Materials[mat] then
 				local rel = anchor.CFrame:ToObjectSpace(d.CFrame)
 				local offset = Vector3.new(info.offset.x, info.offset.y, info.offset.z)
-				local cf = CFrame.new(rel.Position * scale - offset) * rel.Rotation
-				local size = d.Size * scale
-				-- The generator knows where each mesh belongs (MeshLibrary.Parts): trust it over the
-				-- importer, which may recenter, rotate or rescale pieces.
 				local box = MeshLibrary.Parts[d.Name]
-				if box then
-					local center = Vector3.new(box.c[1], box.c[2], box.c[3])
-					local expected = Vector3.new(box.s[1], box.s[2], box.s[3])
-					local tolerance = 0.05 + expected.Magnitude * 0.02
-					if (cf.Position - center).Magnitude > 0.1 then
-						moved += 1
-					end
-					-- the imported rotation (relative to the origin cube, then absolute) is kept when it
-					-- turns the mesh's own size into the expected box; otherwise the closest 90 degree one
-					local rotation: CFrame? = nil
-					for _, r in { rel.Rotation, d.CFrame.Rotation } do
-						if (worldBox(r, size) - expected).Magnitude <= tolerance then
-							rotation = r
-							break
-						end
-					end
-					if rotation == nil then
-						fixed += 1
-						rotation = closestAxisRotation(rel.Rotation, size, expected, tolerance)
-					end
-					if rotation then
-						cf = CFrame.new(center) * rotation
-					else
-						cf = CFrame.new(center)
-						size = expected
-					end
-				end
-				local list = found[assetId :: string] or {}
-				found[assetId :: string] = list
-				table.insert(list, { part = d, cf = cf, size = size, mat = mat })
-				count += 1
+				table.insert(entries, {
+					d = d,
+					assetId = assetId :: string,
+					mat = mat :: string,
+					rel = rel,
+					imported = rel.Position * scale,
+					expected = if box then Vector3.new(box.c[1], box.c[2], box.c[3]) + offset else nil,
+					box = box,
+					offset = offset,
+				})
 			end
 		end
 	end
-	-- scale and rotation of the import (expected: 1 and 0,0,0), pieces the importer had misplaced
+
+	-- 2. the importer may have turned the whole file (a half turn is invisible on a cube): find the
+	-- 90-degree rotation that best maps the expected positions onto the imported ones
+	local fitPairs = {}
+	for _, e in entries do
+		local ex = e.expected
+		if ex then
+			table.insert(fitPairs, {
+				measured = { x = e.imported.X, y = e.imported.Y, z = e.imported.Z },
+				expected = { x = ex.X, y = ex.Y, z = ex.Z },
+			})
+		end
+	end
+	local fit, globalError = AxisFit.Best(fitPairs)
+	local global = CFrame.fromMatrix(
+		Vector3.zero,
+		Vector3.new(fit.right.x, fit.right.y, fit.right.z),
+		Vector3.new(fit.up.x, fit.up.y, fit.up.z)
+	)
+	local undo = global:Inverse()
+
+	-- 3. templates: generator position, imported rotation with the global turn removed
+	local found: { [string]: { MeshTemplate } } = {}
+	local count, moved, fixed = 0, 0, 0
+	for _, e in entries do
+		local d = e.d
+		local size = d.Size * scale
+		local rotation = undo * e.rel.Rotation
+		local cf = CFrame.new(e.imported - e.offset) * rotation
+		local box = e.box
+		if box then
+			local center = Vector3.new(box.c[1], box.c[2], box.c[3])
+			local expectedSize = Vector3.new(box.s[1], box.s[2], box.s[3])
+			local tolerance = 0.05 + expectedSize.Magnitude * 0.02
+			if (cf.Position - center).Magnitude > 0.1 then
+				moved += 1
+			end
+			local chosen: CFrame? = nil
+			for _, r in { rotation, e.rel.Rotation, d.CFrame.Rotation } do
+				if (worldBox(r, size) - expectedSize).Magnitude <= tolerance then
+					chosen = r
+					break
+				end
+			end
+			if chosen == nil then
+				fixed += 1
+				chosen = closestAxisRotation(rotation, size, expectedSize, tolerance)
+			end
+			if chosen then
+				cf = CFrame.new(center) * chosen
+			else
+				cf = CFrame.new(center)
+				size = expectedSize
+			end
+		end
+		local list = found[e.assetId] or {}
+		found[e.assetId] = list
+		table.insert(list, { part = d, cf = cf, size = size, mat = e.mat })
+		count += 1
+	end
+	-- scale / rotation of the import, the global turn found, pieces the importer had misplaced
 	local o = anchor.Orientation
-	print(("[ModelFactory] mesh library loaded: %d meshes (origin size %.3f, rotation %d,%d,%d; %d repositioned, %d reshaped)"):format(count, anchor.Size.X, o.X, o.Y, o.Z, moved, fixed))
+	local gx, gy, gz = global:ToOrientation()
+	print(("[ModelFactory] mesh library loaded: %d meshes (origin size %.3f, rotation %d,%d,%d; import turned %d,%d,%d, fit %.2f; %d repositioned, %d reshaped)"):format(
+		count, anchor.Size.X, o.X, o.Y, o.Z, math.deg(gx), math.deg(gy), math.deg(gz), globalError, moved, fixed))
+	if globalError > 1 then
+		warn("[ModelFactory] the imported library does not match the generator (mirrored or edited?): re-import assets/BlackMarketMeshes.fbx")
+	end
 	library = found
 	return found
 end

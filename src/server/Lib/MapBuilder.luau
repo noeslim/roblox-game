@@ -737,7 +737,7 @@ end
 -- Build ---------------------------------------------------------------------------------------------------
 
 -- Printed at every build: tells whether Studio runs the latest code (Rojo connected).
-MapBuilder.VERSION = "2026-09-26g"
+MapBuilder.VERSION = "2026-09-26h"
 
 function MapBuilder.Build(): (Instance, Instance)
 	local started = os.clock()
