@@ -22,7 +22,7 @@ Economy.Profile = {
 	MaxWeaponNameLength = 24,
 	-- furniture a brand-new player starts with ("buildableId,x,z,rotation", plot-local studs)
 	StarterHideout = {
-		"counter_folding,0,14,0",
+		"counter_folding,0,6,0",
 		"workbench_basic,-14,-18.5,0",
 		"storage_crate,17.5,-19.5,0",
 		"storage_crate,20.5,-19.5,0",
@@ -164,7 +164,7 @@ Economy.Building = {
 	SellRefundRate = 0.5,
 	PlotSizeX = 48,
 	PlotSizeZ = 48,
-	PlotMaxHeight = 30,
+	PlotMaxHeight = 13, -- the basement ceiling is 14 studs high
 }
 
 return Economy

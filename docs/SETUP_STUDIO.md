@@ -68,7 +68,10 @@ Redémarre Studio : un bouton **Rojo** apparaît dans l'onglet *Plugins*.
 ⚠️ **Ne modifie pas les scripts dans Studio** : Rojo les écrase à la prochaine synchro. Modifie-les dans VS Code (ou laisse Claude le faire).
 La map, les modèles et les décors que tu construis dans Workspace ne sont **pas** touchés par Rojo. Sauvegarde-les avec *File → Publish* ou *Save*.
 
-## 7. Ce que tu dois voir (état actuel : phase 1)
+## 7. Ce que tu dois voir
+
+> Depuis la phase M : tu apparais dans le **sous-sol de ta trap house** (The Blocks), les clients entrent par la porte d'entrée et descendent l'escalier. La construction se fait dans le sous-sol (la maison au-dessus devient invisible pour toi en mode construction).
+
 
 Le jeu est **en anglais** pour les joueurs.
 
@@ -123,7 +126,25 @@ Les comptoirs, l'établi, le coffre, le canapé, les néons et toutes les pièce
 
 Quand Claude met à jour les modèles : supprime l'ancien `BlackMarketMeshes` dans Assets et refais les étapes 1 à 7.
 
-## 10. Réglages pour le rendu réaliste
+## 10. Construire la ville dans le place (recommandé, une fois)
+
+Sans cette étape, la ville est construite à chaque lancement de serveur : ça marche, mais c'est plus lent et le streaming (important pour les téléphones) ne peut pas être activé.
+
+1. Fais d'abord l'import des modèles 3D (section 9), sinon la ville sera construite en blocs simples.
+2. Avec `rojo serve` connecté, **sans lancer Play**, ouvre la **Command Bar** et exécute :
+   ```lua
+   require(game.ServerScriptService.Server.Lib.MapBuilder).Build()
+   ```
+3. Output affiche `[MapBuilder] city built ...`. La ville apparaît dans Workspace (`City`) avec les 18 trap houses (`Hideouts`). Le Baseplate est rangé dans ServerStorage.
+4. **Supprime ou déplace tes anciennes constructions de test** qui se trouvent vers le centre (0, 0, 0) : c'est maintenant le Downtown.
+5. **File → Save**. Le streaming est activé automatiquement (Workspace → StreamingEnabled).
+6. **File → Experience Settings → Places** : **Max Players = 24**.
+
+Pour régénérer la ville (après une mise à jour de Claude), relance la même commande : elle remplace `City` et `Hideouts`. Si tu as retouché la map à la main, fais une copie avant.
+
+![Aperçu de la ville](img/city_overview.png)
+
+## 11. Réglages pour le rendu réaliste
 
 - **Éclairage Future** (ombres et reflets réalistes) : Explorer → **Lighting** → Properties → **Technology = Future**. Sauvegarde.
 - **Sons d'ambiance** : dans le Toolbox, onglet Audio, cherche « city ambience loop », « rain loop », « police siren distant ». Clic droit → Copy Asset ID, puis colle les ids dans `src/shared/Config/World.luau` (section `Sounds`) sous la forme `"rbxassetid://123456"`.

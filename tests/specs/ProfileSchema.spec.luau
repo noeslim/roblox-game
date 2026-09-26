@@ -187,7 +187,7 @@ return function(t)
 	t.test("v1 profile gets the starter stash and keeps its data", function()
 		local d: any = { Version = 1, Money = 900, Hideout = { Objects = {} }, Weapons = {} }
 		t.truthy(ProfileSchema.Prepare(d, cfg))
-		t.eq(d.Version, 2)
+		t.eq(d.Version, ProfileSchema.VERSION)
 		t.eq(d.Money, 900)
 		t.eq(#d.Hideout.Objects, #Economy.Profile.StarterHideout)
 		t.eq(d.Stats.Crafted, 0)
@@ -217,5 +217,12 @@ return function(t)
 		t.eq(d.Stats.Crafted, 0)
 		t.eq(d.Stats.Sold, 3)
 		t.eq(d.Stats.Earned, 0)
+	end)
+
+	t.test("v2 stash: the starter counter moves into the basement layout", function()
+		local d: any = { Version = 2, Hideout = { Objects = { "counter_folding,0,14,0", "rug,0,0,0" } } }
+		t.truthy(ProfileSchema.Prepare(d, cfg))
+		t.eq(d.Hideout.Objects[1], "counter_folding,0,6,0")
+		t.eq(d.Hideout.Objects[2], "rug,0,0,0")
 	end)
 end

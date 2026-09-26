@@ -21,6 +21,7 @@ sys.path.insert(0, HERE)
 
 import lib  # noqa: E402
 from assets import BUILDABLES, WEAPON_PARTS  # noqa: E402
+from city_assets import CITY_ASSETS  # noqa: E402
 from materials import MATERIALS  # noqa: E402
 
 FBX_PATH = os.path.join(ROOT, "assets", "BlackMarketMeshes.fbx")
@@ -63,6 +64,13 @@ def select_only(objs):
 
 
 def build():
+    layout, groups, stats, mats = make_library()
+    export(layout, groups, stats)
+    return layout
+
+
+def make_library():
+    """Builds every model in the current (empty) scene. Returns (layout, groups, stats, materials)."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     mats = make_materials()
 
@@ -78,6 +86,19 @@ def build():
         for ob in lib.PIECES[start:]:
             ob.matrix_world = move @ ob.matrix_world
         layout[name] = {"kind": kind, "offset": offset}
+    # city models are big: one row further away, spaced by their own size
+    cursor = 0.0
+    for name, fn in CITY_ASSETS:
+        start = len(lib.PIECES)
+        lib.begin_asset(name)
+        fn()
+        offset = (cursor + 80.0, 0.0, -160.0)
+        move = Matrix.Translation(lib.rb(offset))
+        for ob in lib.PIECES[start:]:
+            ob.matrix_world = move @ ob.matrix_world
+        kind = "house" if name.startswith("house") else ("building" if name.startswith("bld") else "prop")
+        layout[name] = {"kind": kind, "offset": offset}
+        cursor += 140.0
 
     # everything to plain meshes (applies bevels, curves...)
     select_only(lib.PIECES)
@@ -112,6 +133,10 @@ def build():
     anchor = bpy.context.view_layer.objects.active
     anchor.name = "__origin__"
     anchor.data.materials.append(mats["plastic_grey"])
+    return layout, groups, stats, mats
+
+
+def export(layout, groups, stats):
 
     os.makedirs(os.path.dirname(FBX_PATH), exist_ok=True)
     bpy.ops.export_scene.fbx(

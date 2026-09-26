@@ -42,8 +42,8 @@ local function sortedPlots(): { Instance }
 	return plots
 end
 
--- Where a character appears on its plot: behind the starter counter, facing the street.
-local SPAWN_LOCAL = Vector3.new(0, 3, 8)
+-- Where a character appears: in the basement, behind the starter counter, facing the stairs side.
+local SPAWN_LOCAL = Vector3.new(0, 3, 0)
 
 function PlotService.GetSpawnCFrame(plot: Instance): CFrame
 	local origin = PlotUtil.GetOrigin(plot)
@@ -77,7 +77,7 @@ local function assign(player: Player)
 			return
 		end
 	end
-	ServerNet.Notify(player, "All plots are taken on this server. Try another server.", "error")
+	ServerNet.Notify(player, "All trap houses are taken on this server. You can still fight in the War Zone, or join another server.", "error")
 end
 
 local function release(player: Player)

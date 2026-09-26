@@ -58,6 +58,7 @@ local mirrorDirty = true
 local focus = Vector3.zero
 local height = SETTINGS.CameraHeight
 local busy = false
+local hiddenParts: { BasePart } = {}
 
 -- UI refs
 local gui: ScreenGui
@@ -407,6 +408,29 @@ end
 
 -- Enter / exit ----------------------------------------------------------------------------
 
+-- The stash is a basement: hide (for this player only) everything above it and the walls facing the
+-- camera, so the overhead camera can see inside.
+local HIDE_ALWAYS = { BasementWallS = true, BasementWallE = true }
+
+local function setHouseHidden(hidden: boolean)
+	for _, p in hiddenParts do
+		p.LocalTransparencyModifier = 0
+	end
+	table.clear(hiddenParts)
+	local p = plot
+	local house = p and p:FindFirstChild("House")
+	if not hidden or p == nil or house == nil then
+		return
+	end
+	local floorY = PlotUtil.GetOrigin(p).Position.Y
+	for _, d in house:GetDescendants() do
+		if d:IsA("BasePart") and (d.Position.Y > floorY + 12.5 or HIDE_ALWAYS[d.Name]) then
+			d.LocalTransparencyModifier = 1
+			table.insert(hiddenParts, d)
+		end
+	end
+end
+
 local function enter()
 	plot = PlotUtil.FindPlotOf(player.UserId)
 	if plot == nil then
@@ -425,6 +449,7 @@ local function enter()
 	bar.Visible = true
 	hintLabel.Visible = true
 	toggleButton.Text = "EXIT"
+	setHouseHidden(true)
 	setMode("Place")
 end
 
@@ -437,6 +462,7 @@ local function exit()
 		hoverHighlight.Adornee = nil
 	end
 	workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+	setHouseHidden(false)
 	local controls = getControls()
 	if controls then
 		controls:Enable()

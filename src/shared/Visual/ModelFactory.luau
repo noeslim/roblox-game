@@ -88,11 +88,13 @@ local function loadLibrary(): { [string]: { MeshTemplate } }?
 end
 
 -- Clones the library meshes of `assetId` into `parent`, placed relative to `origin`.
-local function addLibraryMeshes(assetId: string, parent: Instance, origin: CFrame, canCollide: boolean): boolean
+-- Returns the created parts (empty when the model is not in the library).
+local function placeLibrary(assetId: string, parent: Instance, origin: CFrame, canCollide: boolean): { MeshPart }
+	local created: { MeshPart } = {}
 	local lib = loadLibrary()
 	local templates = lib and lib[assetId]
 	if templates == nil then
-		return false
+		return created
 	end
 	for _, t in templates do
 		local look = MeshLibrary.Materials[t.mat]
@@ -111,9 +113,20 @@ local function addLibraryMeshes(assetId: string, parent: Instance, origin: CFram
 		p.CanCollide = canCollide and look.material ~= "Neon"
 		p.CanTouch = false
 		p.CastShadow = look.material ~= "Neon" and look.material ~= "Glass"
+		p:SetAttribute("MeshMaterial", t.mat)
 		p.Parent = parent
+		table.insert(created, p)
 	end
-	return true
+	return created
+end
+
+local function addLibraryMeshes(assetId: string, parent: Instance, origin: CFrame, canCollide: boolean): boolean
+	return #placeLibrary(assetId, parent, origin, canCollide) > 0
+end
+
+-- For the map builder: places a library model (buildings, props, trap house details).
+function ModelFactory.PlaceLibraryModel(assetId: string, parent: Instance, origin: CFrame, canCollide: boolean): { MeshPart }
+	return placeLibrary(assetId, parent, origin, canCollide)
 end
 
 function ModelFactory.HasMeshes(assetId: string): boolean

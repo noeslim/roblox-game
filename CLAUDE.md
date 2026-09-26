@@ -58,6 +58,8 @@ rojo sourcemap -o sourcemap.json && luau-lsp analyze --definitions=globalTypes.d
 # modèles 3D (Blender en module Python : pip install bpy==4.2.0 numpy, Python 3.11) :
 python3 tools/meshgen/build.py            # régénère assets/BlackMarketMeshes.fbx + Config/MeshLibrary.luau
 python3 tools/meshgen/build.py --render   # + aperçus Cycles dans assets/previews/ (~3 min)
+lune run tools/dump_city                  # plan de la ville -> tools/meshgen/city_layout.json (requis par build.py)
+python3 tools/meshgen/city_preview.py     # rendu de toute la ville -> docs/img/city_*.png (~3 min)
 ```
 Avant de terminer une session : `tests/run` ET `tests/syntax` doivent passer.
 Si Lune n'est pas installé : `cargo install lune --locked` (ou via Rokit/Aftman sur le PC).
@@ -99,4 +101,7 @@ Assertions disponibles : `t.eq`, `t.near`, `t.truthy`, `t.falsy`, `t.throws`.
 - Animations : `Config/Animations` (R15 Roblox pour marche/idle/emotes, poses procédurales jouées par `PoseController` sur tous les clients, slots `Custom` pour des animations publiées). `server/Lib/AnimServer` (NPC, emotes, arme dans la main). Scène du deal : poignée de main → le dealer compte les billets → le client inspecte l'arme et part avec.
 - Ambiance : pluie (attribut `Raining` décidé par WorldService), sol mouillé, fumée, bidons en feu, bennes, sacs, flaques, néons qui clignotent (`AmbienceController`), sons à renseigner dans `Config/World.Sounds`.
 - Modèles 3D : `tools/meshgen` (Blender bpy) génère `assets/BlackMarketMeshes.fbx`, importé une fois dans Studio sous `ReplicatedStorage.Assets.BlackMarketMeshes` (docs/SETUP_STUDIO.md §9). `ModelFactory` les utilise s'ils sont présents (repère `__origin__` pour position et échelle), sinon garde les blocs. Chaque mesh s'appelle `<id>__<matériau>`, les matériaux Roblox sont dans `Config/MeshLibrary` (généré).
-- Prochaine étape : valider dans Studio (import des meshes, animations, pluie), puis refonte de l'UI style Criminality (téléphone de dealer), puis ROADMAP 2.2 (descentes).
+- **Phase M (map)** : `Config/City` + `Logic/CityLayout` (plan pur et testé : 9 quartiers, avenues, 338 bâtiments, 18 trap houses, mobilier, War Zone, POI) + `Logic/CityParts` (pièces exactes : structure de la trap house, sous-sol, escalier, clôtures, bunkers...) + `server/Lib/MapBuilder` (instancie tout, meshes de la bibliothèque, lumières, streaming). À lancer une fois dans Studio (docs/SETUP_STUDIO.md §10) ; sinon CityService la construit au démarrage.
+- Trap house : origine du terrain = centre du sol du sous-sol (48×48 constructible, plafond à 14, `PlotMaxHeight` 13), cage d'escalier en +X, porte d'entrée au-dessus. Chaque Plot_N contient `Anchor` (Floor, streaming persistant), `House`, `Sign`, `Waypoints` (Door → StairsTop → StairsBottom, suivis par les clients), `Objects`. Profil v3 (comptoir de départ déplacé).
+- Aperçu 3D de la ville : `lune run tools/dump_city && python3 tools/meshgen/city_preview.py` → `docs/img/city_*.png`.
+- Prochaine étape : valider la ville dans Studio, puis refonte de l'UI style Criminality (téléphone de dealer), puis M.3/M.4 (logique des points d'intérêt et de la War Zone), puis recrutement.

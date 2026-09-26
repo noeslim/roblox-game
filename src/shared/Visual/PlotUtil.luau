@@ -1,12 +1,18 @@
 --!strict
 -- Converts plot-local stash coordinates to world CFrames. Used by the server and the client.
--- A plot is a Folder in workspace.Hideouts with a "Floor" part: the plot origin is the center of
--- the floor's top face, local +Z points to the street.
+-- A plot is a Folder in workspace.Hideouts (one per trap house) with a "Floor" part (inside the
+-- plot's Anchor model): the plot origin is the center of the basement floor's top face, local +Z
+-- points to the street.
 
 local PlotUtil = {}
 
 function PlotUtil.GetFloor(plot: Instance): BasePart
-	return plot:WaitForChild("Floor") :: BasePart
+	local floor = plot:FindFirstChild("Floor", true)
+	while floor == nil do
+		task.wait(0.2) -- streaming in
+		floor = plot:FindFirstChild("Floor", true)
+	end
+	return floor :: BasePart
 end
 
 function PlotUtil.GetOrigin(plot: Instance): CFrame

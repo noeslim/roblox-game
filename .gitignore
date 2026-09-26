@@ -12,3 +12,4 @@ assets/previews/*.png
 !assets/previews/_all.png
 !assets/previews/combo_*.png
 __pycache__/
+tools/meshgen/city_layout.json

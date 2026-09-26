@@ -9,7 +9,7 @@
 
 local ProfileSchema = {}
 
-ProfileSchema.VERSION = 2
+ProfileSchema.VERSION = 3
 
 export type WeaponData = {
 	id: string,
@@ -80,6 +80,17 @@ ProfileSchema.Migrations = {
 		-- v2 introduced building: v1 stashes were always empty, give them the starter furniture
 		if type(data.Hideout) ~= "table" or type(data.Hideout.Objects) ~= "table" or #data.Hideout.Objects == 0 then
 			data.Hideout = { Objects = table.clone(cfg.starterHideout) }
+		end
+	end,
+	[2] = function(data: any, cfg: SchemaConfig)
+		-- v3 moved stashes into trap house basements: the starter counter moves back so that the
+		-- queue of customers fits before the front wall
+		if type(data.Hideout) == "table" and type(data.Hideout.Objects) == "table" then
+			for i, s in data.Hideout.Objects do
+				if s == "counter_folding,0,14,0" then
+					data.Hideout.Objects[i] = "counter_folding,0,6,0"
+				end
+			end
 		end
 	end,
 } :: { [number]: Migration }

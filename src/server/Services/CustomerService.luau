@@ -255,29 +255,44 @@ local function slotPosition(stash: Stash, position: number): Vector3?
 	return cf.Position
 end
 
-local function entrancePosition(stash: Stash): Vector3
-	local origin = PlotUtil.GetOrigin(stash.plot)
-	local _, sizeZ = PlotUtil.GetSize(stash.plot)
-	return (origin * CFrame.new(0, 0, sizeZ / 2 + 3)).Position
+-- Path into the trap house: front door -> top of the stairs -> bottom of the stairs (plot Waypoints).
+local function routeIn(stash: Stash): { Vector3 }
+	local route = {}
+	local waypoints = stash.plot:FindFirstChild("Waypoints")
+	for _, name in { "Door", "StairsTop", "StairsBottom" } do
+		local wp = waypoints and waypoints:FindFirstChild(name)
+		if wp and wp:IsA("BasePart") then
+			table.insert(route, wp.Position)
+		end
+	end
+	if #route == 0 then -- plot without a house: walk to its street edge
+		local origin = PlotUtil.GetOrigin(stash.plot)
+		local _, sizeZ = PlotUtil.GetSize(stash.plot)
+		table.insert(route, (origin * CFrame.new(0, 0, sizeZ / 2 + 3)).Position)
+	end
+	return route
 end
 
+-- One of the two customer spawns closest to the house door.
 local function pickSpawn(stash: Stash): Vector3
-	local entrance = entrancePosition(stash)
+	local door = routeIn(stash)[1]
 	local city = workspace:FindFirstChild("City")
 	local spawns = city and city:FindFirstChild("CustomerSpawns")
 	local candidates = {}
 	if spawns then
 		for _, s in spawns:GetChildren() do
-			if s:IsA("BasePart") and math.abs(s.Position.Z - entrance.Z) < 12 then
+			if s:IsA("BasePart") then
 				table.insert(candidates, s.Position)
 			end
 		end
 	end
 	if #candidates == 0 then
-		local origin = PlotUtil.GetOrigin(stash.plot)
-		return (origin * CFrame.new(rng:NextNumber(-40, 40), 0, 0)).Position + (entrance - origin.Position)
+		return door + Vector3.new(rng:NextNumber(-40, 40), 0, 12)
 	end
-	return candidates[rng:NextInteger(1, #candidates)]
+	table.sort(candidates, function(a, b)
+		return (a - door).Magnitude < (b - door).Magnitude
+	end)
+	return candidates[rng:NextInteger(1, math.min(2, #candidates))]
 end
 
 -- Behaviour ----------------------------------------------------------------------
@@ -380,8 +395,13 @@ local function runNpc(stash: Stash, npc: Npc)
 		return npc.state == "Leaving" or not stash.alive
 	end
 
-	-- 1. walk from the street end to the plot entrance
-	NpcMover.WalkTo(npc.humanoid, npc.root, entrancePosition(stash), CFG.MaxWalkSeconds, cancelled)
+	-- 1. walk to the house, in through the front door and down to the basement
+	for _, wp in routeIn(stash) do
+		if cancelled() then
+			break
+		end
+		NpcMover.WalkTo(npc.humanoid, npc.root, wp, CFG.MaxWalkSeconds, cancelled)
+	end
 
 	-- 2. queue: walk to the slot, move up when the line advances
 	if not cancelled() then
@@ -422,9 +442,17 @@ local function runNpc(stash: Stash, npc: Npc)
 	-- 3. leave the way it came, then vanish
 	if stash.alive and npc.model.Parent then
 		task.wait(npc.leaveDelay or 1.5)
-		NpcMover.WalkTo(npc.humanoid, npc.root, npc.exit, CFG.MaxWalkSeconds, function()
+		local function gone(): boolean
 			return not stash.alive
-		end)
+		end
+		local route = routeIn(stash)
+		for i = #route, 1, -1 do -- back up the stairs and out of the door
+			if gone() then
+				break
+			end
+			NpcMover.WalkTo(npc.humanoid, npc.root, route[i], CFG.MaxWalkSeconds, gone)
+		end
+		NpcMover.WalkTo(npc.humanoid, npc.root, npc.exit, CFG.MaxWalkSeconds, gone)
 	end
 	destroyNpc(npc)
 end

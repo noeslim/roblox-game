@@ -42,4 +42,23 @@ MATERIALS = {
     "neon_orange": ("Neon", "#FFB020", 0.5, 0.0, 4, 0),
     "neon_purple": ("Neon", "#B45CFF", 0.5, 0.0, 4, 0),
     "neon_red": ("Neon", "#FF3B3B", 0.5, 0.0, 4, 0),
+    # city
+    "window_glass": ("Glass", "#1E2A36", 0.08, 0.3, 0, 0),
+    "window_lit": ("Glass", "#2A2A30", 0.1, 0.0, 2, 0),  # switched to warm Neon at night (NightGlow)
+    "trim_light": ("Concrete", "#BDB6A8", 0.8, 0.0, 0, 0),
+    "trim_dark": ("Metal", "#2A2A2E", 0.5, 0.6, 0, 0),
+    "lamp_lens": ("Glass", "#FFE2B0", 0.2, 0.0, 3, 0),  # NightGlow + light
+    "car_paint": ("SmoothPlastic", "#7A1F1F", 0.25, 0.4, 0, 0),  # recolored per car
+    "container_paint": ("CorrodedMetal", "#8A3A2A", 0.7, 0.4, 0, 0),  # recolored per container
+    "awning": ("Fabric", "#7A1E2A", 0.9, 0.0, 0, 0),  # recolored per shop
+    "roof_green": ("Slate", "#2E5A45", 0.6, 0.0, 0, 0),
+    "brick_red": ("Brick", "#6E3A2E", 0.9, 0.0, 0, 0),
+    "concrete": ("Concrete", "#7A7A7E", 0.9, 0.0, 0, 0),
+    "siding": ("WoodPlanks", "#6E7F86", 0.8, 0.0, 0, 0),
+    "water": ("Glass", "#2E6A8A", 0.05, 0.0, 0, 0.3),
+    "plaster_white": ("Plaster", "#E8E2D6", 0.9, 0.0, 0, 0),
+    "chrome": ("Metal", "#C8CCD2", 0.15, 1.0, 0, 0),
+    "bark": ("Wood", "#4A3626", 0.9, 0.0, 0, 0),
+    "headlight": ("Neon", "#FFF3D6", 0.2, 0.0, 3, 0),
+    "court_paint": ("SmoothPlastic", "#E8E8E8", 0.6, 0.0, 0, 0),
 }
