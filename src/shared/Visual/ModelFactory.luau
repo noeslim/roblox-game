@@ -98,6 +98,7 @@ local function placeLibrary(assetId: string, parent: Instance, origin: CFrame, c
 	if templates == nil then
 		return created
 	end
+	local precise = string.sub(assetId, 1, 4) == "bld_" or string.sub(assetId, 1, 6) == "house_"
 	for _, t in templates do
 		local look = MeshLibrary.Materials[t.mat]
 		local p = t.part:Clone()
@@ -116,6 +117,13 @@ local function placeLibrary(assetId: string, parent: Instance, origin: CFrame, c
 		p.CanTouch = false
 		p.CastShadow = look.material ~= "Neon" and look.material ~= "Glass"
 		p:SetAttribute("MeshMaterial", t.mat)
+		if precise then
+			-- Automatic fidelity simplifies meshes with distance and twists thin window frames.
+			-- Only settable from Studio (command bar build), ignored at run time.
+			pcall(function()
+				(p :: any).RenderFidelity = Enum.RenderFidelity.Precise
+			end)
+		end
 		p.Parent = parent
 		table.insert(created, p)
 	end
