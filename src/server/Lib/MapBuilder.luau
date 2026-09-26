@@ -677,8 +677,12 @@ end
 
 -- Build ---------------------------------------------------------------------------------------------------
 
+-- Printed at every build: tells whether Studio runs the latest code (Rojo connected).
+MapBuilder.VERSION = "2026-09-26e"
+
 function MapBuilder.Build(): (Instance, Instance)
 	local started = os.clock()
+	print(("[MapBuilder] version %s"):format(MapBuilder.VERSION))
 	local textures = setupTextureVariants()
 	print(("[MapBuilder] %d textures ready"):format(textures))
 	local layout = CityLayout.Build(City)

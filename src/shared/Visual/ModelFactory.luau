@@ -45,6 +45,38 @@ type MeshTemplate = { part: MeshPart, cf: CFrame, size: Vector3, mat: string }
 local library: { [string]: { MeshTemplate } }? = nil
 local libraryLoaded = false
 
+-- Size of the world-aligned box around a part of local size `size` turned by rotation `r`.
+local function worldBox(r: CFrame, size: Vector3): Vector3
+	local x, y, z = r.RightVector, r.UpVector, -r.LookVector
+	return Vector3.new(
+		math.abs(x.X) * size.X + math.abs(y.X) * size.Y + math.abs(z.X) * size.Z,
+		math.abs(x.Y) * size.X + math.abs(y.Y) * size.Y + math.abs(z.Y) * size.Z,
+		math.abs(x.Z) * size.X + math.abs(y.Z) * size.Y + math.abs(z.Z) * size.Z
+	)
+end
+
+-- Among the 24 axis-aligned rotations, those that turn `size` into `expected`; returns the one
+-- closest to `hint` (nil when none fits: the mesh was rescaled unevenly).
+local function closestAxisRotation(hint: CFrame, size: Vector3, expected: Vector3, tolerance: number): CFrame?
+	local axes = { Vector3.xAxis, -Vector3.xAxis, Vector3.yAxis, -Vector3.yAxis, Vector3.zAxis, -Vector3.zAxis }
+	local best: CFrame? = nil
+	local bestScore = -math.huge
+	for _, right in axes do
+		for _, up in axes do
+			if math.abs(right:Dot(up)) < 0.5 then
+				local r = CFrame.fromMatrix(Vector3.zero, right, up)
+				if (worldBox(r, size) - expected).Magnitude <= tolerance then
+					local score = r.RightVector:Dot(hint.RightVector) + r.UpVector:Dot(hint.UpVector)
+					if score > bestScore then
+						best, bestScore = r, score
+					end
+				end
+			end
+		end
+	end
+	return best
+end
+
 local function loadLibrary(): { [string]: { MeshTemplate } }?
 	if libraryLoaded then
 		return library
@@ -78,21 +110,26 @@ local function loadLibrary(): { [string]: { MeshTemplate } }?
 				if box then
 					local center = Vector3.new(box.c[1], box.c[2], box.c[3])
 					local expected = Vector3.new(box.s[1], box.s[2], box.s[3])
-					local r = rel.Rotation
-					local worldSize = Vector3.new(
-						math.abs(r.RightVector.X) * size.X + math.abs(r.UpVector.X) * size.Y + math.abs(r.LookVector.X) * size.Z,
-						math.abs(r.RightVector.Y) * size.X + math.abs(r.UpVector.Y) * size.Y + math.abs(r.LookVector.Y) * size.Z,
-						math.abs(r.RightVector.Z) * size.X + math.abs(r.UpVector.Z) * size.Y + math.abs(r.LookVector.Z) * size.Z
-					)
 					local tolerance = 0.05 + expected.Magnitude * 0.02
 					if (cf.Position - center).Magnitude > 0.1 then
 						moved += 1
 					end
-					if (worldSize - expected).Magnitude <= tolerance then
-						cf = CFrame.new(center) * r
-					else
-						-- rotation or scale of this piece is off: axis aligned, generator size
+					-- the imported rotation (relative to the origin cube, then absolute) is kept when it
+					-- turns the mesh's own size into the expected box; otherwise the closest 90 degree one
+					local rotation: CFrame? = nil
+					for _, r in { rel.Rotation, d.CFrame.Rotation } do
+						if (worldBox(r, size) - expected).Magnitude <= tolerance then
+							rotation = r
+							break
+						end
+					end
+					if rotation == nil then
 						fixed += 1
+						rotation = closestAxisRotation(rel.Rotation, size, expected, tolerance)
+					end
+					if rotation then
+						cf = CFrame.new(center) * rotation
+					else
 						cf = CFrame.new(center)
 						size = expected
 					end
