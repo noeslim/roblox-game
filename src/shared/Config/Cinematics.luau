@@ -42,6 +42,8 @@ return {
 		HandFollow = 16, -- how fast the hands follow their target (higher = snappier)
 
 		SkinColor = "#C68642", -- used when the character has no body colors
+		AvatarHands = true, -- use the avatar's own hands (false: simple block hands)
+		AvatarHandFlip = false, -- true if the avatar's palms show upwards instead of the back of the hands
 		SleeveColor = "#1E1E24",
 
 		Sounds = {

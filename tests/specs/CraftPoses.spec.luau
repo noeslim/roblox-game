@@ -98,4 +98,21 @@ return function(t)
 		local m = P.Part(ctx, "Magazine", ctx.plan.rackStart - 0.001)
 		t.truthy((w.Position - m.Position).Magnitude < 0.05)
 	end)
+
+	t.test("arms never cross", function()
+		for _, yaw in { 0, 90, 200 } do
+			local ctx = P.Context(CFrame.new(0, 3, 0) * CFrame.Angles(0, math.rad(yaw), 0), ALL)
+			local time = 0
+			while time < ctx.plan.outroStart do
+				local aiming = time >= ctx.plan.testStart and time < ctx.plan.inspectStart
+				if not aiming then
+					local cam = P.Camera(ctx, time)
+					local r, l = P.Hands(ctx, time)
+					local rx, lx = cam:PointToObjectSpace(r.Position).X, cam:PointToObjectSpace(l.Position).X
+					t.truthy(rx > lx, ("arms crossed at t=%.2f (bench %d)"):format(time, yaw))
+				end
+				time += 0.1
+			end
+		end
+	end)
 end

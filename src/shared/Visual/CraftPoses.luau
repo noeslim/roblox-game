@@ -47,6 +47,13 @@ function CraftPoses.new(deps: Deps, cfg: any, layout: { [string]: any }, slotOrd
 	end
 	P.offsetOf = offsetOf
 
+	-- which hand fits a part on the bench: the frame's barrel end is on your left, so parts that sit
+	-- towards the barrel are fitted by the left hand (-1), the others by the right hand (+1)
+	function P.WorkerSide(slot: string): number
+		local l = layout[slot]
+		return if l and l.pos.x > 0.3 then -1 else 1
+	end
+
 	-- a palm at `pos`, fingers pointing away from `eye` (flat), back of the hand up
 	local function palm(pos: any, eye: any): any
 		local flat = (pos - eye) * V3.new(1, 0, 1)
@@ -58,7 +65,8 @@ function CraftPoses.new(deps: Deps, cfg: any, layout: { [string]: any }, slotOrd
 	function P.Context(benchCF: any, present: { [string]: boolean }): any
 		local ctx: any = {}
 		ctx.top = benchCF * CF.new(0, cfg.TopY, 0)
-		ctx.jig = ctx.top * CF.new(0, cfg.JigHeight, 0)
+		-- barrel to the left (like when it is held): the grip is on your right the whole scene
+		ctx.jig = ctx.top * CF.new(0, cfg.JigHeight, 0) * CF.Angles(0, math.pi, 0)
 		local eye = (benchCF * CF.new(vec(cfg.CameraOffset))).Position
 		local look = (benchCF * CF.new(vec(cfg.LookAt))).Position
 		ctx.eye = eye
@@ -67,22 +75,27 @@ function CraftPoses.new(deps: Deps, cfg: any, layout: { [string]: any }, slotOrd
 		local flat = ((look - eye) * V3.new(1, 0, 1)).Unit
 		ctx.camHeld = lookAt(stand, stand + flat + V3.new(0, -0.12, 0))
 		ctx.plan = Assembly.Plan(present, slotOrder, cfg)
-		-- parts wait flat on the bench, spread along X (the magazine too, until it is loaded)
-		local order = {}
-		for _, s in ctx.plan.steps do
-			table.insert(order, s.slot)
+		-- parts wait flat on the bench, on the side of the hand that will take them (the magazine
+		-- too, until it is loaded), turned like the frame so they only tilt up when carried
+		local leftSide, rightSide = {}, {}
+		for _, st in ctx.plan.steps do
+			table.insert(if P.WorkerSide(st.slot) < 0 then leftSide else rightSide, st.slot)
 		end
 		if ctx.plan.load then
-			table.insert(order, ctx.plan.load.slot)
+			table.insert(leftSide, ctx.plan.load.slot)
 		end
 		ctx.trays = {}
-		local n = #order
-		for i, slot in order do
-			local x = if n > 1 then -cfg.TraySpread / 2 + (i - 1) * cfg.TraySpread / (n - 1) else 0
-			local l = layout[slot]
-			local rest = (if l then l.size.z / 2 else 0.2) + 0.02 -- lying down, its Z becomes the height
-			ctx.trays[slot] = ctx.top * CF.new(x, rest, cfg.TrayZ) * CF.Angles(math.rad(90), 0, 0) * CF.new(-offsetOf(slot))
+		local half = cfg.TraySpread / 2
+		local function lay(slots: { string }, from: number, to: number)
+			for i, slot in slots do
+				local x = if #slots > 1 then from + (i - 1) * (to - from) / (#slots - 1) else (from + to) / 2
+				local l = layout[slot]
+				local rest = (if l then l.size.z / 2 else 0.2) + 0.02 -- lying down, its Z becomes the height
+				ctx.trays[slot] = ctx.top * CF.new(x, rest, cfg.TrayZ) * CF.Angles(0, math.pi, 0) * CF.Angles(math.rad(90), 0, 0) * CF.new(-offsetOf(slot))
+			end
 		end
+		lay(leftSide, -half, -0.6)
+		lay(rightSide, 0.4, half)
 		-- two small blocks under the frame (the cradle)
 		local gap = cfg.JigHeight - 0.35
 		ctx.cradle = {
@@ -123,8 +136,10 @@ function CraftPoses.new(deps: Deps, cfg: any, layout: { [string]: any }, slotOrd
 		return { plan.testStart + d * 0.45, plan.testStart + d * 0.7 }
 	end
 
+	-- held in front of you, barrel to the LEFT: the grip is on the right, so the right hand holds the
+	-- grip and the left hand the front, without crossing the arms
 	local function held(ctx: any): any
-		return ctx.camHeld * CF.new(vec(cfg.HeldOffset)) * CF.Angles(0, math.rad(-15), 0)
+		return ctx.camHeld * CF.new(vec(cfg.HeldOffset)) * CF.Angles(0, math.rad(165), 0)
 	end
 
 	-- the weapon frame (fitted parts follow it)
@@ -233,9 +248,10 @@ function CraftPoses.new(deps: Deps, cfg: any, layout: { [string]: any }, slotOrd
 		local u = Assembly.Progress(t, plan.screwStart, plan.liftStart)
 		local index = if u < 0.5 then 1 else 2
 		local lu = (u - (index - 1) * 0.5) / 0.5
-		local spot = ctx.jig * CF.new(if index == 1 then -0.35 else 0.35, 0, 0.21)
+		-- screws on the side facing you (weapon -Z, the frame is turned around)
+		local spot = ctx.jig * CF.new(if index == 1 then -0.35 else 0.35, 0, -0.21)
 		local reach = Assembly.Smooth(math.min(1, lu / 0.3))
-		local tip = spot * CF.new(0, 0, 0.55 - 0.3 * reach)
+		local tip = spot * CF.new(0, 0, -(0.55 - 0.3 * reach))
 		return lookAt(tip.Position, spot.Position) * CF.Angles(0, 0, lu * math.pi * 6)
 	end
 
@@ -245,18 +261,32 @@ function CraftPoses.new(deps: Deps, cfg: any, layout: { [string]: any }, slotOrd
 		local phase = Assembly.Phase(plan, t)
 		local right, left = P.Rest(ctx, 1), P.Rest(ctx, -1)
 		local w = P.Weapon(ctx, t)
+		-- a point on the weapon, on the side that faces you
+		local camPos = P.Camera(ctx, t).Position
 		local function onWeapon(x: number, y: number, z: number): any
-			return palm((w * CF.new(x, y, z)).Position, ctx.eye)
+			local a, b = (w * CF.new(x, y, z)).Position, (w * CF.new(x, y, -z)).Position
+			return palm(if (a - camPos).Magnitude <= (b - camPos).Magnitude then a else b, ctx.eye)
 		end
 		if phase == "intro" or phase == "assemble" or phase == "screw" then
+			local frameReady = #plan.steps > 0 and t >= plan.steps[1].done
+			-- the free hand holds the frame: the left one at the front, or the right one at the grip
+			local holdFront = palm((ctx.jig * CF.new(0.6, 0.55, -0.1)).Position, ctx.eye)
+			local holdRear = palm((ctx.jig * CF.new(-0.6, 0.55, -0.1)).Position, ctx.eye)
+			if frameReady then
+				left = holdFront
+			end
 			local s = Assembly.Current(plan, t)
 			if s then
 				local state, u = Assembly.PartState(s, t)
 				local grip = gripAbove(ctx, s.slot, P.Part(ctx, s.slot, t))
-				right = if state == "pick" then right:Lerp(grip, Assembly.Smooth(u)) else grip
-			end
-			if #plan.steps > 0 and t >= plan.steps[1].done then
-				left = palm((ctx.jig * CF.new(-0.6, 0.55, 0.1)).Position, ctx.eye) -- holds the frame
+				if P.WorkerSide(s.slot) < 0 then
+					left = if state == "pick" then left:Lerp(grip, Assembly.Smooth(u)) else grip
+					if frameReady then
+						right = holdRear
+					end
+				else
+					right = if state == "pick" then right:Lerp(grip, Assembly.Smooth(u)) else grip
+				end
 			end
 			local d = P.Driver(ctx, t)
 			if d then
@@ -284,7 +314,7 @@ function CraftPoses.new(deps: Deps, cfg: any, layout: { [string]: any }, slotOrd
 		elseif phase == "rack" then
 			local u = Assembly.Progress(t, plan.rackStart, plan.testStart)
 			local pull = math.sin(math.min(1, u / 0.7) * math.pi) * cfg.RackPull
-			left = onWeapon(-0.45 - pull, 0.55, 0.15) -- charging handle on top
+			right = onWeapon(-0.45 - pull, 0.55, 0.15) -- the right hand racks the handle at the back, the left keeps the front
 		end
 		return right, left
 	end

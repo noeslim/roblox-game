@@ -117,8 +117,8 @@ end
 
 local function makeHand(side: number, parent: Instance): Hand
 	local prefix = if side == 1 then "Right" else "Left"
-	local hand = cloneLimb(prefix .. "Hand", parent)
-	local arm = cloneLimb(prefix .. "LowerArm", parent)
+	local hand = if C.AvatarHands then cloneLimb(prefix .. "Hand", parent) else nil
+	local arm = if C.AvatarHands then cloneLimb(prefix .. "LowerArm", parent) else nil
 	if hand and arm then
 		arm.Color = Color3.fromHex(C.SleeveColor) -- a sleeve; the shirt texture does not follow a copy
 		arm.Material = Enum.Material.Fabric
@@ -146,7 +146,8 @@ local function setHand(h: Hand, palmCF: CFrame, elbow: Vector3)
 	local forward, up = palmCF.LookVector, palmCF.UpVector
 	if h.avatar then
 		-- R15 limbs hang down: fingers along -Y, the back of the right hand on +X (left hand: -X)
-		local handCF = CFrame.fromMatrix(palmCF.Position, up * h.side, -forward)
+		local flip = if C.AvatarHandFlip then -1 else 1
+		local handCF = CFrame.fromMatrix(palmCF.Position, up * h.side * flip, -forward)
 		h.hand.CFrame = handCF
 		local wrist = palmCF.Position - forward * (h.hand.Size.Y / 2)
 		local toWrist = wrist - elbow
