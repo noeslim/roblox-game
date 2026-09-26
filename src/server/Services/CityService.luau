@@ -84,7 +84,6 @@ local function setupLighting()
 	Lighting.ColorShift_Bottom = Color3.new(0, 0, 0)
 	Lighting.FogStart = 0
 	Lighting.FogEnd = 100000
-	print(("[CityService] lighting: technology %s"):format(Lighting.Technology.Name))
 	local atmosphere = ensureEffect("Atmosphere", "BM_Atmosphere") :: Atmosphere
 	atmosphere.Density = L.Atmosphere.Density
 	atmosphere.Haze = L.Atmosphere.Haze
