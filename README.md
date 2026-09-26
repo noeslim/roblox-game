@@ -8,6 +8,8 @@ Jeu de dealer d'armes dans une ville criminelle de nuit : construis ta planque, 
 
 ## Installation sur ton PC (une seule fois)
 
+👉 Guide détaillé pas à pas : [`docs/SETUP_STUDIO.md`](docs/SETUP_STUDIO.md)
+
 1. Installe **Roblox Studio**.
 2. Installe **Rokit** (gestionnaire d'outils Roblox) : https://github.com/rojo-rbx/rokit
 3. Dans le dossier du projet : `rokit install` (installe Rojo et Lune aux bonnes versions).

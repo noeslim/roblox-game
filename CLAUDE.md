@@ -10,7 +10,7 @@ Jeu de dealer d'armes (univers fictif, armes stylisées, pas de sang) avec ambia
 - **Rojo** (`default.project.json`) : le code vit dans `src/`, synchronisé vers Studio sur le PC des auteurs.
 - **Luau** avec `--!strict` en tête de chaque fichier.
 - **Lune** pour exécuter les tests dans le cloud (pas de Roblox Studio ici).
-- Sauvegarde : ProfileStore (à ajouter en phase 1.1).
+- Sauvegarde : ProfileStore (vendored dans `src/server/Packages/ProfileStore.luau`, licence dans `docs/licenses/`).
 
 ## Arborescence
 ```
@@ -48,6 +48,8 @@ lune run tests/run            # tous les tests
 lune run tests/run Ledger     # seulement les specs dont le nom contient "Ledger"
 lune run tests/syntax         # compile tous les fichiers de src/ (erreurs de syntaxe)
 rojo build -o build.rbxl      # vérifie que le projet Rojo se construit
+# vérification des types --!strict (optionnel, nécessite luau-lsp + globalTypes.d.luau de luau-lsp) :
+rojo sourcemap -o sourcemap.json && luau-lsp analyze --definitions=globalTypes.d.luau --sourcemap=sourcemap.json --ignore="src/server/Packages/**" src
 ```
 Avant de terminer une session : `tests/run` ET `tests/syntax` doivent passer.
 Si Lune n'est pas installé : `cargo install lune --locked` (ou via Rokit/Aftman sur le PC).
@@ -76,4 +78,8 @@ Assertions disponibles : `t.eq`, `t.near`, `t.truthy`, `t.falsy`, `t.throws`.
 - Phase 0 terminée : Config (Economy, Parts), Logic (Ledger, WeaponCrafting, Heat, Customer, ComboTracker, Grid, DayNight), 46 tests Lune verts.
 - Bootstrap : `src/server/init.server.luau` démarre chaque module de `Services/` (méthode `:Start()`), idem côté client avec `Controllers/`.
 - `WorldService` fait tourner le cycle jour/nuit (Lighting.ClockTime + attributs `Phase` / `PhaseSecondsLeft` sur ReplicatedStorage). `PhaseHudController` affiche JOUR/NUIT.
-- Prochaine étape : ROADMAP 1.1 (profils et sauvegarde).
+- 1.1 terminée : `Logic/ProfileSchema` (template, migrations versionnées, nettoyage anti-triche, 17 tests), `Config/Data` (nom du store, mock Studio), limites de profil dans `Economy.Profile`. `Ledger:SetChangedCallback` écrit l'argent dans le profil.
+- `DataService` : charge le profil à la connexion (ProfileStore, session verrouillée), kick si échec ou profil d'une version future, publie les attributs `Money` / `Level` sur le Player. API : `GetLedger(player)`, `GetData(player)`, `IsLoaded(player)`, signal `PlayerLoaded`. Studio seulement : attribut `DebugGrant` pour ajouter de l'argent. `MoneyHudController` affiche l'argent.
+- Pour changer la forme du profil : incrémenter `ProfileSchema.VERSION` + ajouter une migration (voir l'en-tête du module).
+- Guide d'installation pour les auteurs : `docs/SETUP_STUDIO.md`.
+- Prochaine étape : ROADMAP 1.2 (construction libre, serveur).

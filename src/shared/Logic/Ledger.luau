@@ -13,6 +13,7 @@ export type Ledger = typeof(setmetatable(
 		_max: number,
 		_history: { Entry },
 		_historySize: number,
+		_onChanged: ((balance: number) -> ())?,
 	},
 	Ledger
 ))
@@ -35,6 +36,7 @@ function Ledger.new(startingBalance: number?, maxBalance: number?): Ledger
 		_max = maxBalance or math.huge,
 		_history = {},
 		_historySize = HISTORY_SIZE,
+		_onChanged = nil,
 	}, Ledger)
 	return self
 end
@@ -47,7 +49,15 @@ function Ledger.CanAfford(self: Ledger, amount: number): boolean
 	return isValidAmount(amount) and self._balance >= amount
 end
 
+-- Called with the new balance after every change (the server uses it to write the save and the HUD).
+function Ledger.SetChangedCallback(self: Ledger, callback: ((balance: number) -> ())?)
+	self._onChanged = callback
+end
+
 function Ledger._record(self: Ledger, amount: number, reason: string)
+	if self._onChanged then
+		self._onChanged(self._balance)
+	end
 	table.insert(self._history, { amount = amount, reason = reason })
 	if #self._history > self._historySize then
 		table.remove(self._history, 1)

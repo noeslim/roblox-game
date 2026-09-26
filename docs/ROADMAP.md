@@ -13,7 +13,7 @@ Légende coût : 🟢 petit · 🟡 moyen · 🔴 gros (mérite Opus)
 
 ## Phase 1 — Jouable minimal (la planque qui vend)
 
-**1.1 🟡 Profils et sauvegarde**
+**1.1 🟡 Profils et sauvegarde** ✅
 > Lis CLAUDE.md. Ajoute ProfileStore dans `src/server/Packages`, crée `src/server/Services/DataService.luau` qui charge/sauvegarde le profil (argent, inventaire de pièces, armes, niveau, planque sérialisée). Branche `Ledger` dessus. Tests Lune pour le schéma et la migration de version du profil.
 
 **1.2 🔴 Construction libre (serveur)**

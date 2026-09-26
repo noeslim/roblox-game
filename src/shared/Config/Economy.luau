@@ -6,6 +6,22 @@ local Economy = {}
 Economy.StartingMoney = 500
 Economy.MaxMoney = 1_000_000_000_000
 
+-- Profile limits (anti-exploit caps applied when a saved profile is loaded) -----
+Economy.Profile = {
+	-- parts given to a brand-new player so they can craft their first weapon
+	StarterParts = {
+		street_body = 1,
+		street_barrel = 1,
+		street_stock = 1,
+		street_sight = 1,
+		street_mag = 1,
+	},
+	MaxPartStack = 999,
+	MaxWeapons = 200,
+	MaxLevel = 100,
+	MaxWeaponNameLength = 24,
+}
+
 -- Rarity ------------------------------------------------------------------
 Economy.RarityOrder = { "Common", "Uncommon", "Rare", "Epic", "Legendary" }
 
