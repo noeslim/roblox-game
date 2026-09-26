@@ -6,3 +6,8 @@ sourcemap.json
 /Packages
 /ServerPackages
 .DS_Store
+
+# per-model preview tiles (the contact sheet and weapon combos are kept)
+assets/previews/*.png
+!assets/previews/_all.png
+!assets/previews/combo_*.png

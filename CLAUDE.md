@@ -55,6 +55,9 @@ lune run tests/syntax         # compile tous les fichiers de src/ (erreurs de sy
 rojo build -o build.rbxl      # vérifie que le projet Rojo se construit
 # vérification des types --!strict (optionnel, nécessite luau-lsp + globalTypes.d.luau de luau-lsp) :
 rojo sourcemap -o sourcemap.json && luau-lsp analyze --definitions=globalTypes.d.luau --sourcemap=sourcemap.json --ignore="src/server/Packages/**" src
+# modèles 3D (Blender en module Python : pip install bpy==4.2.0 numpy, Python 3.11) :
+python3 tools/meshgen/build.py            # régénère assets/BlackMarketMeshes.fbx + Config/MeshLibrary.luau
+python3 tools/meshgen/build.py --render   # + aperçus Cycles dans assets/previews/ (~3 min)
 ```
 Avant de terminer une session : `tests/run` ET `tests/syntax` doivent passer.
 Si Lune n'est pas installé : `cargo install lune --locked` (ou via Rokit/Aftman sur le PC).
@@ -93,4 +96,7 @@ Assertions disponibles : `t.eq`, `t.near`, `t.truthy`, `t.falsy`, `t.throws`.
   - Client : `BuildController` (touche B, caméra aérienne, fantôme vert/rouge), `WorkbenchController`, `SellController`, `FxController` (animations), `MoneyHudController` (argent + niveau).
   - Profil v2 : planque de départ, prix des armes, stats. 20 objets dans `Config/Buildables` (modèles en pièces simples, remplaçables par `ReplicatedStorage.Assets.Buildables.<id>`).
 - Réglages à faire dans Studio : valeurs dans `Effects.Settings`, `UI.Theme`, `Config/World`, `Config/Visual` (sons à remplacer).
-- Prochaine étape : faire tester la phase 1 dans Studio et corriger, puis ROADMAP 2.1 (ambiance nuit : pluie, néons, musique).
+- Animations : `Config/Animations` (R15 Roblox pour marche/idle/emotes, poses procédurales jouées par `PoseController` sur tous les clients, slots `Custom` pour des animations publiées). `server/Lib/AnimServer` (NPC, emotes, arme dans la main). Scène du deal : poignée de main → le dealer compte les billets → le client inspecte l'arme et part avec.
+- Ambiance : pluie (attribut `Raining` décidé par WorldService), sol mouillé, fumée, bidons en feu, bennes, sacs, flaques, néons qui clignotent (`AmbienceController`), sons à renseigner dans `Config/World.Sounds`.
+- Modèles 3D : `tools/meshgen` (Blender bpy) génère `assets/BlackMarketMeshes.fbx`, importé une fois dans Studio sous `ReplicatedStorage.Assets.BlackMarketMeshes` (docs/SETUP_STUDIO.md §9). `ModelFactory` les utilise s'ils sont présents (repère `__origin__` pour position et échelle), sinon garde les blocs. Chaque mesh s'appelle `<id>__<matériau>`, les matériaux Roblox sont dans `Config/MeshLibrary` (généré).
+- Prochaine étape : valider dans Studio (import des meshes, animations, pluie), puis refonte de l'UI style Criminality (téléphone de dealer), puis ROADMAP 2.2 (descentes).

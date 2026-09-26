@@ -108,6 +108,27 @@ Si quelque chose ne marche pas : copie les lignes **rouges** d'Output et envoie-
    Le compteur passe à **$ 750**. (Cette commande ne marche que dans Studio.)
 3. **Stop**, puis **Play** à nouveau : tu dois retrouver **$ 750**. ✅ La sauvegarde marche.
 
+## 9. Importer les modèles 3D (une fois, puis à chaque nouvelle version)
+
+Les comptoirs, l'établi, le coffre, le canapé, les néons et toutes les pièces d'armes existent en vrais modèles 3D dans `assets/BlackMarketMeshes.fbx` (aperçu : `assets/previews/_all.png`). Sans import, le jeu garde les modèles en blocs.
+
+1. Dans Studio : onglet **Home → Import 3D** (ou **File → Import 3D**).
+2. Choisis `Documents\roblox-game\assets\BlackMarketMeshes.fbx`.
+3. Dans la fenêtre d'import, garde les réglages par défaut (surtout ne coche **pas** « Merge meshes »), puis **Import**.
+4. Un modèle **BlackMarketMeshes** apparaît dans Workspace (des dizaines d'objets alignés, c'est normal).
+5. Dans **ReplicatedStorage**, crée un dossier nommé **Assets** (clic droit → Insert Object → Folder), s'il n'existe pas.
+6. Glisse **BlackMarketMeshes** dans **ReplicatedStorage → Assets**. Le nom doit rester exactement `BlackMarketMeshes`.
+7. **File → Save** (ou Publish).
+8. Play : dans Output tu dois voir `[ModelFactory] mesh library loaded: 128 meshes`, et ta planque utilise les nouveaux modèles.
+
+Quand Claude met à jour les modèles : supprime l'ancien `BlackMarketMeshes` dans Assets et refais les étapes 1 à 7.
+
+## 10. Réglages pour le rendu réaliste
+
+- **Éclairage Future** (ombres et reflets réalistes) : Explorer → **Lighting** → Properties → **Technology = Future**. Sauvegarde.
+- **Sons d'ambiance** : dans le Toolbox, onglet Audio, cherche « city ambience loop », « rain loop », « police siren distant ». Clic droit → Copy Asset ID, puis colle les ids dans `src/shared/Config/World.luau` (section `Sounds`) sous la forme `"rbxassetid://123456"`.
+- **Animations maison** (optionnel) : les animations du deal sont faites par le code et marchent déjà. Si tu crées tes propres animations avec l'Animation Editor, publie-les et colle leur id dans `src/shared/Config/Animations.luau` (section `Custom`) : elles remplacent automatiquement celles du code.
+
 ### Remplacer les modèles provisoires par de vrais modèles 3D
 
 Les objets et armes sont faits de pièces simples générées par le code. Pour mettre tes propres modèles :
