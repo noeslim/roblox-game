@@ -3,12 +3,12 @@
 -- over the workbench, your hands take each part laid on the bench and fit it on the frame (click),
 -- tighten two screws, then lift the weapon to look at it while its name, rarity and value show.
 -- Purely visual: the server already made the weapon. Click / space / E skips.
-local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Cinematics = require(Shared.Config.Cinematics)
@@ -101,29 +101,96 @@ local function piece(name: string, size: Vector3, color: Color3, material: Enum.
 	return p
 end
 
-type Hand = { palm: Part, fingers: Part, thumb: Part, forearm: Part, side: number }
+-- A hand: the avatar's own hand and lower arm when it has R15 parts, simple blocks otherwise.
+type Hand = { hand: BasePart, arm: BasePart, fingers: BasePart?, thumb: BasePart?, side: number, avatar: boolean }
+
+local function cloneLimb(name: string, parent: Instance): BasePart?
+	local character = player.Character
+	local source = character and character:FindFirstChild(name)
+	if source == nil or not source:IsA("BasePart") then
+		return nil
+	end
+	local ok, copy = pcall(function()
+		return source:Clone()
+	end)
+	if not ok or copy == nil then
+		return nil
+	end
+	local part = copy :: BasePart
+	for _, d in part:GetChildren() do
+		if not d:IsA("SpecialMesh") and not d:IsA("SurfaceAppearance") then
+			d:Destroy() -- joints, attachments, scripts
+		end
+	end
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanQuery = false
+	part.CanTouch = false
+	part.CastShadow = false
+	part.Transparency = 0;
+	(part :: any).LocalTransparencyModifier = 0
+	part.Parent = parent
+	return part
+end
 
 local function makeHand(side: number, parent: Instance): Hand
+	local prefix = if side == 1 then "Right" else "Left"
+	local hand = cloneLimb(prefix .. "Hand", parent)
+	local arm = cloneLimb(prefix .. "LowerArm", parent)
+	if hand and arm then
+		arm.Color = Color3.fromHex(C.SleeveColor) -- a sleeve; the shirt texture does not follow a copy
+		arm.Material = Enum.Material.Fabric
+		return { hand = hand, arm = arm, side = side, avatar = true }
+	end
+	if hand then
+		hand:Destroy()
+	end
+	if arm then
+		arm:Destroy()
+	end
 	local skin = skinColor()
-	local sleeve = Color3.fromHex(C.SleeveColor)
 	return {
-		palm = piece("Palm", Vector3.new(0.46, 0.17, 0.5), skin, Enum.Material.SmoothPlastic, parent),
+		hand = piece("Palm", Vector3.new(0.46, 0.17, 0.5), skin, Enum.Material.SmoothPlastic, parent),
 		fingers = piece("Fingers", Vector3.new(0.44, 0.14, 0.34), skin, Enum.Material.SmoothPlastic, parent),
 		thumb = piece("Thumb", Vector3.new(0.14, 0.14, 0.3), skin, Enum.Material.SmoothPlastic, parent),
-		forearm = piece("Forearm", Vector3.new(0.44, 0.44, 1), sleeve, Enum.Material.Fabric, parent),
+		arm = piece("Forearm", Vector3.new(0.44, 0.44, 1), Color3.fromHex(C.SleeveColor), Enum.Material.Fabric, parent),
 		side = side,
+		avatar = false,
 	}
 end
 
--- palm: back of the hand up, fingers towards -Z; the forearm reaches back to an elbow near the camera
+-- palmCF: back of the hand up (+Y), fingers towards -Z. The forearm goes back towards `elbow`.
 local function setHand(h: Hand, palmCF: CFrame, elbow: Vector3)
-	h.palm.CFrame = palmCF
-	h.fingers.CFrame = palmCF * CFrame.new(0, -0.05, -0.38) * CFrame.Angles(math.rad(-28), 0, 0)
-	h.thumb.CFrame = palmCF * CFrame.new(-0.27 * h.side, -0.04, -0.08) * CFrame.Angles(0, math.rad(28 * h.side), 0)
+	local forward, up = palmCF.LookVector, palmCF.UpVector
+	if h.avatar then
+		-- R15 limbs hang down: fingers along -Y, the back of the right hand on +X (left hand: -X)
+		local handCF = CFrame.fromMatrix(palmCF.Position, up * h.side, -forward)
+		h.hand.CFrame = handCF
+		local wrist = palmCF.Position - forward * (h.hand.Size.Y / 2)
+		local toWrist = wrist - elbow
+		local dir = if toWrist.Magnitude > 0.01 then toWrist.Unit else forward
+		local side = up - dir * up:Dot(dir)
+		side = if side.Magnitude > 0.01 then side.Unit else Vector3.xAxis
+		-- the sleeve reaches the elbow (off screen), so no forearm floats in the air
+		local length = math.max(0.5, toWrist.Magnitude)
+		if math.abs(h.arm.Size.Y - length) > 0.01 then
+			h.arm.Size = Vector3.new(h.arm.Size.X, length, h.arm.Size.Z)
+		end
+		h.arm.CFrame = CFrame.fromMatrix(wrist - dir * (length / 2), side * h.side, -dir)
+		return
+	end
+	h.hand.CFrame = palmCF
+	local fingers, thumb = h.fingers, h.thumb
+	if fingers then
+		fingers.CFrame = palmCF * CFrame.new(0, -0.05, -0.38) * CFrame.Angles(math.rad(-28), 0, 0)
+	end
+	if thumb then
+		thumb.CFrame = palmCF * CFrame.new(-0.27 * h.side, -0.04, -0.08) * CFrame.Angles(0, math.rad(28 * h.side), 0)
+	end
 	local wrist = (palmCF * CFrame.new(0, 0, 0.3)).Position
 	local length = math.max(0.3, (elbow - wrist).Magnitude)
-	h.forearm.Size = Vector3.new(0.44, 0.44, length)
-	h.forearm.CFrame = CFrame.lookAt((wrist + elbow) / 2, wrist)
+	h.arm.Size = Vector3.new(0.44, 0.44, length)
+	h.arm.CFrame = CFrame.lookAt((wrist + elbow) / 2, wrist)
 end
 
 -- a hand reaching a point, fingers pointing away from the camera
@@ -163,12 +230,50 @@ local function letterbox(): (ScreenGui, Frame)
 	return gui, fade
 end
 
+-- Last resort when the scene fails to start: give everything back to the player.
+local function emergencyRestore()
+	playing = false
+	local camera = workspace.CurrentCamera
+	camera.CameraType = Enum.CameraType.Custom
+	setCharacterHidden(false)
+	local controls = getControls()
+	if controls then
+		controls:Enable()
+	end
+	local leftover = workspace:FindFirstChild("CraftCinematic")
+	if leftover then
+		leftover:Destroy()
+	end
+	local gui = player:FindFirstChild("PlayerGui")
+	for _, name in { "CraftLetterbox", "CraftReveal" } do
+		local g = gui and gui:FindFirstChild(name)
+		if g then
+			g:Destroy()
+		end
+	end
+end
+
+local play: (BasePart, { [string]: string }, any, (() -> ())?) -> ()
+
 -- Plays the scene on `bench` (the workbench's root part). result = the RequestCraft answer.
+-- Never leaves the player stuck: any error ends the scene and restores the camera and controls.
 function CraftCinematicController.Play(bench: BasePart, partIds: { [string]: string }, result: any, onDone: (() -> ())?)
 	if playing then
 		return
 	end
 	playing = true
+	local ok = xpcall(play, function(err)
+		warn("[CraftCinematic] could not start: " .. tostring(err))
+	end, bench, partIds, result, onDone)
+	if not ok then
+		emergencyRestore()
+		if onDone then
+			onDone()
+		end
+	end
+end
+
+play = function(bench: BasePart, partIds: { [string]: string }, result: any, onDone: (() -> ())?)
 	local camera = workspace.CurrentCamera
 	local oldFov = camera.FieldOfView
 	local startCF = camera.CFrame
@@ -230,23 +335,29 @@ function CraftCinematicController.Play(bench: BasePart, partIds: { [string]: str
 	local skipTo: number? = nil
 	local finished = false
 
-	ContextActionService:BindActionAtPriority("SkipCraftCinematic", function(_, state)
-		if state == Enum.UserInputState.Begin and os.clock() - started > C.SkipAfter then
+	local SKIP_INPUTS = { [Enum.UserInputType.MouseButton1] = true, [Enum.UserInputType.Touch] = true }
+	local SKIP_KEYS = { [Enum.KeyCode.Space] = true, [Enum.KeyCode.E] = true, [Enum.KeyCode.ButtonA] = true, [Enum.KeyCode.Escape] = true }
+	local skipConn = UserInputService.InputBegan:Connect(function(input)
+		if (SKIP_INPUTS[input.UserInputType] or SKIP_KEYS[input.KeyCode]) and os.clock() - started > C.SkipAfter then
 			skipTo = plan.outroStart
 		end
-		return Enum.ContextActionResult.Sink
-	end, false, Enum.ContextActionPriority.High.Value, Enum.UserInputType.MouseButton1, Enum.KeyCode.Space, Enum.KeyCode.E, Enum.KeyCode.ButtonA, Enum.UserInputType.Touch)
+	end)
 
 	local elapsedOffset = 0
-	local conn: RBXScriptConnection
+	local conn: RBXScriptConnection? = nil
 	local function finish()
 		if finished then
 			return
 		end
 		finished = true
-		conn:Disconnect()
-		ContextActionService:UnbindAction("SkipCraftCinematic")
-		folder:Destroy()
+		playing = false
+		if conn then
+			conn:Disconnect()
+		end
+		skipConn:Disconnect()
+		pcall(function()
+			folder:Destroy()
+		end)
 		if reveal then
 			local r = reveal
 			task.delay(1.2, function()
@@ -269,7 +380,7 @@ function CraftCinematicController.Play(bench: BasePart, partIds: { [string]: str
 		end
 	end
 
-	conn = RunService.RenderStepped:Connect(function()
+	local function frame()
 		local t = os.clock() - started + elapsedOffset
 		local skip = skipTo
 		if skip and t < skip then
@@ -407,7 +518,15 @@ function CraftCinematicController.Play(bench: BasePart, partIds: { [string]: str
 		elseif phase == "done" then
 			finish()
 		end
+	end
+	conn = RunService.RenderStepped:Connect(function()
+		xpcall(frame, function(err)
+			warn("[CraftCinematic] " .. tostring(err))
+			task.defer(finish)
+		end)
 	end)
+	-- whatever happens, the player gets the controls back
+	task.delay(plan.total + 3, finish)
 end
 
 function CraftCinematicController.IsPlaying(): boolean

@@ -5,6 +5,7 @@
 
 return {
 	Craft = {
+		Enabled = true, -- false: crafting stays in the workbench window (no scene)
 		IntroSeconds = 0.6, -- camera moves over the bench
 		PickSeconds = 0.25, -- the hand reaches the part on the bench
 		CarrySeconds = 0.45, -- carries it next to the frame

@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Economy = require(Shared.Config.Economy)
 local City = require(Shared.Config.City)
+local Cinematics = require(Shared.Config.Cinematics)
 local Parts = require(Shared.Config.Parts)
 local Messages = require(Shared.Config.Messages)
 local Inventory = require(Shared.Logic.Inventory)
@@ -118,7 +119,7 @@ local function doCraft()
 	busy = false
 	if ok then
 		local bench = benchPart
-		if bench and bench.Parent then
+		if Cinematics.Craft.Enabled and bench and bench.Parent and not CraftCinematicController.IsPlaying() then
 			-- first-person assembly scene; the UI comes back when it ends
 			gui.Enabled = false
 			CraftCinematicController.Play(bench, recipe, result, function()
