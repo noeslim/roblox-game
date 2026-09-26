@@ -6,8 +6,15 @@
 -- edited by hand. Command bar:
 --     require(game.ServerScriptService.Server.Lib.MapBuilder).Build()
 -- If the place has no workspace.City when a server starts, CityService builds it at runtime.
--- 3D details come from ReplicatedStorage.Assets.BlackMarketMeshes when imported (plain parts otherwise).
+-- Looks, best first:
+--   1. your prefabs: ReplicatedStorage.Assets.Buildings.<archetype> and Assets.Props.<kind> (a Model,
+--      or a Folder of Model variants). Build them from Roblox's official Modern City kit or any model.
+--   2. the generated mesh library ReplicatedStorage.Assets.BlackMarketMeshes (tools/meshgen)
+--   3. plain parts
+-- Every MaterialVariant found in MaterialService (e.g. a materials pack from the Toolbox) is applied
+-- to the parts of the same base material (bricks, concrete, asphalt...).
 local CollectionService = game:GetService("CollectionService")
+local MaterialService = game:GetService("MaterialService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
@@ -148,6 +155,84 @@ local function streetLight(parent: Instance)
 	CollectionService:AddTag(light, "NightLight")
 end
 
+-- Prefabs & materials --------------------------------------------------------------------------------
+
+-- A prefab from ReplicatedStorage.Assets.<folderName>.<key>: a Model, or a Folder of Model variants.
+local function findPrefab(folderName: string, key: string, rng: Random): Model?
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local folder = assets and assets:FindFirstChild(folderName)
+	local entry = folder and folder:FindFirstChild(key)
+	if entry == nil then
+		return nil
+	end
+	if entry:IsA("Model") then
+		return entry
+	end
+	local variants = {}
+	for _, c in entry:GetChildren() do
+		if c:IsA("Model") then
+			table.insert(variants, c)
+		end
+	end
+	return if #variants > 0 then variants[rng:NextInteger(1, #variants)] else nil
+end
+
+-- Clones a prefab with the bottom center of its bounding box on `cf` (its front must face +Z).
+-- With a footprint, it is scaled uniformly to fit w x d. Returns the clone and its size.
+local function placePrefab(prefab: Model, parent: Instance, cf: CFrame, w: number?, d: number?): (Model, Vector3)
+	local clone = prefab:Clone()
+	for _, x in clone:GetDescendants() do
+		if x:IsA("BasePart") then
+			x.Anchored = true
+		end
+	end
+	local box, size = clone:GetBoundingBox()
+	if w and d and size.X > 0 and size.Z > 0 then
+		local scale = math.min(w / size.X, d / size.Z)
+		if math.abs(scale - 1) > 0.02 then
+			clone:ScaleTo(clone:GetScale() * scale)
+			box, size = clone:GetBoundingBox()
+		end
+	end
+	local bottom = box * CFrame.new(0, -size.Y / 2, 0)
+	clone:PivotTo(cf * bottom:ToObjectSpace(clone:GetPivot()))
+	clone.Parent = parent
+	return clone, size
+end
+
+-- Applies the MaterialVariants of MaterialService (one variant per material + color, so a building
+-- or a road keeps one look). Returns how many parts changed.
+local function applyMaterialVariants(roots: { Instance }, rng: Random): number
+	local byBase: { [Enum.Material]: { string } } = {}
+	for _, v in MaterialService:GetDescendants() do
+		if v:IsA("MaterialVariant") then
+			local list = byBase[v.BaseMaterial] or {}
+			byBase[v.BaseMaterial] = list
+			table.insert(list, v.Name)
+		end
+	end
+	if next(byBase) == nil then
+		return 0
+	end
+	local chosen: { [string]: string } = {}
+	local count = 0
+	for _, root in roots do
+		for _, d in root:GetDescendants() do
+			if d:IsA("BasePart") and d.MaterialVariant == "" then
+				local list = byBase[d.Material]
+				if list then
+					local key = d.Material.Name .. d.Color:ToHex()
+					local name = chosen[key] or list[rng:NextInteger(1, #list)]
+					chosen[key] = name
+					d.MaterialVariant = name
+					count += 1
+				end
+			end
+		end
+	end
+	return count
+end
+
 -- Pieces --------------------------------------------------------------------------------------------
 
 local SIGN_HEIGHT = { shop = 12, chinatown = 26, office = 12, tower = 12, warehouse = 21, apartment = 10 }
@@ -158,17 +243,24 @@ local function buildBuilding(b: CityLayout.Building, parent: Instance, origin: C
 	model.Name = b.archetype
 	local cf = origin * CFrame.new(b.x, groundTop, b.z) * CFrame.Angles(0, math.rad(b.rot), 0)
 	local body: BasePart? = nil
-	for _, spec in CityParts.BuildingBody(a, b.color) do
-		body = makePart(spec, model, cf)
+	local front, signTop = a.d / 2, a.h
+	local prefab = findPrefab("Buildings", b.archetype, rng)
+	if prefab then
+		local _, size = placePrefab(prefab, model, cf, a.w, a.d)
+		front, signTop = size.Z / 2, size.Y
+	else
+		for _, spec in CityParts.BuildingBody(a, b.color) do
+			body = makePart(spec, model, cf)
+		end
+		tagMeshes(ModelFactory.PlaceLibraryModel("bld_" .. b.archetype, model, cf, false), rng)
 	end
-	tagMeshes(ModelFactory.PlaceLibraryModel("bld_" .. b.archetype, model, cf, false), rng)
 	if b.sign then
 		local width = math.min(a.w * 0.6, 18)
 		local board = makePart({
 			name = "Sign",
 			shape = "Block",
 			size = { x = width, y = 3, z = 0.4 },
-			pos = { x = 0, y = SIGN_HEIGHT[b.archetype] or 10, z = a.d / 2 + 0.7 },
+			pos = { x = 0, y = math.min(SIGN_HEIGHT[b.archetype] or 10, signTop - 2), z = front + 0.7 },
 			material = "SmoothPlastic",
 			color = "#141418",
 		}, model, cf)
@@ -261,6 +353,12 @@ local function buildProp(p: CityLayout.Prop, parent: Instance, origin: CFrame, s
 	local cf = origin * CFrame.new(p.x, ground + (p.y or 0), p.z) * CFrame.Angles(0, math.rad(p.rot), 0)
 	local model = Instance.new("Model")
 	model.Name = p.kind
+	local prefab = findPrefab("Props", p.kind, rng)
+	if prefab then
+		placePrefab(prefab, model, cf)
+		model.Parent = parent
+		return
+	end
 	local meshes = ModelFactory.PlaceLibraryModel("prop_" .. p.kind, model, cf, COLLIDING_PROPS[p.kind] == true)
 	if #meshes == 0 then
 		for _, spec in CityParts.PropFallback(p.kind) do
@@ -488,6 +586,11 @@ function MapBuilder.Build(): (Instance, Instance)
 	hideouts.Name = "Hideouts"
 	for _, h in layout.houses do
 		buildHouse(h, hideouts, origin, sidewalkTop, rng)
+	end
+
+	local variants = applyMaterialVariants({ city, hideouts }, rng)
+	if variants > 0 then
+		print(("[MapBuilder] custom materials applied to %d parts"):format(variants))
 	end
 
 	city.Parent = workspace

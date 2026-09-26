@@ -158,6 +158,41 @@ Les objets et armes sont faits de pièces simples générées par le code. Pour 
 3. Le jeu utilisera automatiquement ton modèle à la place du modèle provisoire.
 Même principe pour les armes : `Assets > Weapons > Street` (nom du set).
 
+## 12. Rendre la ville réaliste : kits officiels Roblox + plugins
+
+C'est comme ça que sont faites les belles maps Roblox : des **kits modulaires** (murs, fenêtres, portes, escaliers de secours, climatiseurs… en vrais modèles texturés), des **matériaux réalistes** (MaterialVariant : briques sales, béton taché, asphalte fissuré), des décalques de saleté, beaucoup de petits objets, et l'éclairage Future. Roblox fournit gratuitement un kit de ville complet et de très bonne qualité.
+
+### A. Les matériaux réalistes (5 minutes, effet immédiat)
+1. Toolbox → Creator Store → cherche **« Modern City Materials Pack »** (créateur : **Roblox**). Insère-le.
+2. Il contient des **MaterialVariant** : mets-les dans **MaterialService** (Explorer), s'ils n'y sont pas déjà.
+3. Relance la construction de la ville (section 10). Output affiche `custom materials applied to … parts` : routes, trottoirs, briques, béton et bois de toute la ville utilisent ces textures.
+
+N'importe quel autre pack de MaterialVariant marche pareil : le jeu applique automatiquement chaque variante aux pièces de la même matière de base.
+
+### B. Les vrais bâtiments (le gros du rendu)
+1. Toolbox → cherche **« Modular Building Kit - Modern City »** (créateur : **Roblox**). Insère-le.
+2. Clic droit dessus → **Save to File…** → `ModernCityKit.rbxm`. Fais pareil avec le pack de matériaux.
+3. **Envoie-moi ces fichiers `.rbxm` dans le chat** (comme ton `.rbxl` au début) : je les analyse et j'écris l'assemblage automatique de tous les bâtiments de la ville avec les pièces du kit.
+
+En attendant (ou pour vos propres créations) : n'importe quel Model placé dans `ReplicatedStorage > Assets > Buildings > <type>` remplace ce type de bâtiment partout dans la ville. Les types sont `apartment`, `shop`, `office`, `tower`, `warehouse`, `chinatown`, `mansion` et `ruin`. Le modèle doit avoir **l'entrée vers +Z**, et il est redimensionné pour tenir sur l'emplacement. Si tu mets un **Folder** avec plusieurs Models, le jeu en tire un au hasard pour chaque bâtiment. Même principe pour les objets de rue : `Assets > Props > lamp`, `car`, `tree`, `bench`, `trashcan`, `hydrant`, `container`, `barrier`…
+
+### C. Les plugins Studio utiles pour construire à la main
+À installer depuis le Creator Store (onglet Plugins du Toolbox). Tu en as déjà une partie :
+| Plugin | À quoi il sert |
+|---|---|
+| **Building Tools by F3X** | Construire / redimensionner vite et précisément |
+| **Archimedes** | Faire des arcs, courbes, routes courbes à partir d'une pièce |
+| **GapFill & Extrude** | Remplir les trous entre deux pièces (déjà installé) |
+| **Brushtool** | « Peindre » des objets en masse : herbe, déchets, arbres (déjà installé) |
+| **Model Reflect** | Symétrie de modèles (déjà installé) |
+| **Part to Terrain** | Transformer des pièces en terrain réaliste (déjà installé) |
+| **Resurface / Beveler** | Arrondir les bords, changer les surfaces |
+| **Tag Editor** | Voir / poser les tags (NightLight, NightGlow, FlickerSign…) |
+| **Performance Heatmap** | Repérer ce qui fait ramer la map (important pour mobile) |
+| **Moon Animator 2** | Faire de vraies animations (deal, poignée de main…) |
+
+Avec la ville générée comme base (routes, maisons, gameplay déjà branché), l'associé « visuel » peut ensuite retoucher à la main : ruelles, graffitis, déchets, intérieurs. La commande de construction écrase `City` : garde une copie avant de la relancer.
+
 ## 8. Récupérer le travail de Claude
 
 1. Claude pousse sur une branche `claude/...`. Sur GitHub, fusionne la pull request (ou reste sur la branche).
