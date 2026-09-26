@@ -16,6 +16,7 @@ local GoalsService = require(script.Parent.GoalsService)
 local PoiService = require(script.Parent.PoiService)
 local ServerNet = require(script.Parent.Parent.Lib.ServerNet)
 local AnimServer = require(script.Parent.Parent.Lib.AnimServer)
+local WorldService = require(script.Parent.WorldService)
 
 local CraftService = {}
 
@@ -98,7 +99,7 @@ local function isNight(): boolean
 end
 
 local function blackMarketStock()
-	return BlackMarket.Stock(BlackMarket.NightIndex(workspace:GetServerTimeNow(), Economy.DayNight), Parts, Economy)
+	return BlackMarket.Stock(BlackMarket.NightIndex(WorldService.Now(), Economy.DayNight), Parts, Economy)
 end
 
 -- source: "supplier" (default: on site, or by phone with the delivery fee) or "blackmarket"

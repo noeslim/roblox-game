@@ -51,4 +51,15 @@ function DayNight.Get(now: number, cfg: DayNightConfig): PhaseInfo
 	}
 end
 
+-- Seconds to add to `now` to land at the start of `phase` (0 when already in it). Used by the
+-- Studio shortcut that skips to the night or the day.
+function DayNight.OffsetTo(now: number, cfg: DayNightConfig, phase: Phase): number
+	if DayNight.Get(now, cfg).phase == phase then
+		return 0
+	end
+	local cycle = cfg.DayLength + cfg.NightLength
+	local start = if phase == "Night" then cfg.DayLength else 0
+	return (start - now % cycle) % cycle
+end
+
 return DayNight

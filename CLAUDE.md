@@ -87,7 +87,7 @@ Assertions disponibles : `t.eq`, `t.near`, `t.truthy`, `t.falsy`, `t.throws`.
 ## État
 - Phase 0 terminée : Config (Economy, Parts), Logic (Ledger, WeaponCrafting, Heat, Customer, ComboTracker, Grid, DayNight), 46 tests Lune verts.
 - Bootstrap : `src/server/init.server.luau` démarre chaque module de `Services/` (méthode `:Start()`), idem côté client avec `Controllers/`.
-- `WorldService` fait tourner le cycle jour/nuit (Lighting.ClockTime + attributs `Phase` / `PhaseSecondsLeft` sur ReplicatedStorage). `PhaseHudController` affiche JOUR/NUIT.
+- `WorldService` fait tourner le cycle jour/nuit (Lighting.ClockTime + attributs `Phase` / `PhaseSecondsLeft` sur ReplicatedStorage). `PhaseHudController` affiche JOUR/NUIT. Horloge du jeu : `WorldService.Now()` (à utiliser à la place de `GetServerTimeNow` côté serveur). Studio seulement : `game.ReplicatedStorage:SetAttribute("DebugPhase", "Night")` (ou `"Day"`) saute à cette phase (`DayNight.OffsetTo`).
 - 1.1 terminée : `Logic/ProfileSchema` (template, migrations versionnées, nettoyage anti-triche, 17 tests), `Config/Data` (nom du store, mock Studio), limites de profil dans `Economy.Profile`. `Ledger:SetChangedCallback` écrit l'argent dans le profil.
 - `DataService` : charge le profil à la connexion (ProfileStore, session verrouillée), kick si échec ou profil d'une version future, publie les attributs `Money` / `Level` sur le Player. API : `GetLedger(player)`, `GetData(player)`, `IsLoaded(player)`, signal `PlayerLoaded`. Studio seulement : attribut `DebugGrant` pour ajouter de l'argent. `MoneyHudController` affiche l'argent.
 - Pour changer la forme du profil : incrémenter `ProfileSchema.VERSION` + ajouter une migration (voir l'en-tête du module).

@@ -40,4 +40,18 @@ return function(t)
 		local c = Economy.DayNight
 		t.near(DayNight.Get(c.DayLength + c.NightLength / 2, c).clockTime % 24, 0, 1e-6)
 	end)
+
+	t.test("OffsetTo jumps to the start of the other phase", function()
+		local c = Economy.DayNight
+		for _, now in { 5, c.DayLength - 1, c.DayLength + 10, 1000 * (c.DayLength + c.NightLength) + 42 } do
+			for _, phase in { "Day", "Night" } do
+				local offset = DayNight.OffsetTo(now, c, phase)
+				t.truthy(offset >= 0)
+				t.eq(DayNight.Get(now + offset, c).phase, phase)
+				if offset > 0 then
+					t.near(DayNight.Get(now + offset, c).progress, 0, 1e-6)
+				end
+			end
+		end
+	end)
 end

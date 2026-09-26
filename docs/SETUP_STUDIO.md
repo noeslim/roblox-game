@@ -111,6 +111,14 @@ Si quelque chose ne marche pas : copie les lignes **rouges** d'Output et envoie-
    Le compteur passe à **$ 750**. (Cette commande ne marche que dans Studio.)
 3. **Stop**, puis **Play** à nouveau : tu dois retrouver **$ 750**. ✅ La sauvegarde marche.
 
+### Passer à la nuit (ou au jour) tout de suite
+
+En **Server**, dans la Command Bar :
+```lua
+game.ReplicatedStorage:SetAttribute("DebugPhase", "Night")   -- ou "Day"
+```
+L'horloge du jeu saute au début de cette phase (lumière, pluie, marché noir compris), puis le cycle continue normalement. Studio seulement.
+
 ## 9. Importer les modèles 3D (une fois, puis à chaque nouvelle version)
 
 Les comptoirs, l'établi, le coffre, le canapé, les néons et toutes les pièces d'armes existent en vrais modèles 3D dans `assets/BlackMarketMeshes.fbx` (aperçu : `assets/previews/_all.png`). Sans import, le jeu garde les modèles en blocs.
