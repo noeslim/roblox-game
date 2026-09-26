@@ -1,0 +1,15 @@
+--!strict
+-- Rate limits for client requests (token bucket: burst, then per second).
+
+return {
+	Default = { capacity = 10, refillPerSecond = 4 },
+	PerRemote = {
+		RequestPlace = { capacity = 8, refillPerSecond = 4 },
+		RequestMove = { capacity = 8, refillPerSecond = 4 },
+		RequestRemove = { capacity = 8, refillPerSecond = 4 },
+		RequestCraft = { capacity = 3, refillPerSecond = 1 },
+		RequestBuyPart = { capacity = 10, refillPerSecond = 5 },
+		RequestSetPrice = { capacity = 20, refillPerSecond = 10 },
+		RequestSell = { capacity = 5, refillPerSecond = 2 },
+	} :: { [string]: { capacity: number, refillPerSecond: number } },
+}

@@ -2,16 +2,7 @@ local ProfileSchema = require("../../src/shared/Logic/ProfileSchema")
 local Economy = require("../../src/shared/Config/Economy")
 local Parts = require("../../src/shared/Config/Parts")
 
-local cfg = {
-	startingMoney = Economy.StartingMoney,
-	maxMoney = Economy.MaxMoney,
-	starterParts = Economy.Profile.StarterParts,
-	maxPartStack = Economy.Profile.MaxPartStack,
-	maxWeapons = Economy.Profile.MaxWeapons,
-	maxLevel = Economy.Profile.MaxLevel,
-	maxWeaponNameLength = Economy.Profile.MaxWeaponNameLength,
-	parts = Parts,
-}
+local cfg = ProfileSchema.ConfigFrom(Economy, Parts)
 
 return function(t)
 	t.test("template is a valid, current profile", function()
@@ -68,7 +59,7 @@ return function(t)
 			end,
 		}
 		local d: any = { Version = 1, OldMoney = 7 }
-		local ok = ProfileSchema.Migrate(d, migrations, 3)
+		local ok = ProfileSchema.Migrate(d, cfg, migrations, 3)
 		t.truthy(ok)
 		t.eq(d.Version, 3)
 		t.eq(d.Money, 70)
@@ -80,7 +71,7 @@ return function(t)
 
 	t.test("missing migration is reported", function()
 		local d: any = { Version = 1 }
-		local ok, err = ProfileSchema.Migrate(d, {}, 2)
+		local ok, err = ProfileSchema.Migrate(d, cfg, {}, 2)
 		t.falsy(ok)
 		t.eq(err, "MissingMigration")
 	end)
@@ -96,11 +87,11 @@ return function(t)
 
 	t.test("invalid version is refused", function()
 		for _, v in { -1, 1.5, 0 / 0, "1" :: any } do
-			local ok, err = ProfileSchema.Migrate({ Version = v }, nil, nil)
+			local ok, err = ProfileSchema.Migrate({ Version = v }, cfg)
 			t.falsy(ok, tostring(v))
 			t.eq(err, "InvalidVersion")
 		end
-		t.eq(select(2, ProfileSchema.Migrate(nil)), "NotATable")
+		t.eq(select(2, ProfileSchema.Migrate(nil, cfg)), "NotATable")
 	end)
 
 	t.test("money is clamped to a whole number in range", function()
@@ -182,13 +173,49 @@ return function(t)
 	t.test("broken hideout is reset", function()
 		t.eq(type(ProfileSchema.Sanitize({ Hideout = "x" }, cfg).Hideout.Objects), "table")
 		t.eq(type(ProfileSchema.Sanitize({ Hideout = {} }, cfg).Hideout.Objects), "table")
-		local objects = { { id = "crate" } }
-		t.eq(ProfileSchema.Sanitize({ Hideout = { Objects = objects } }, cfg).Hideout.Objects, objects)
+		local kept = ProfileSchema.Sanitize({ Hideout = { Objects = { "rug,0,0,0", { id = "junk" }, 5 } } }, cfg)
+		t.eq(#kept.Hideout.Objects, 1)
+		t.eq(kept.Hideout.Objects[1], "rug,0,0,0")
 	end)
 
 	t.test("sanitize works in place (ProfileStore keeps the same table)", function()
 		local d: any = { Money = 10 }
 		local out = ProfileSchema.Sanitize(d, cfg)
 		t.eq(out, d)
+	end)
+
+	t.test("v1 profile gets the starter stash and keeps its data", function()
+		local d: any = { Version = 1, Money = 900, Hideout = { Objects = {} }, Weapons = {} }
+		t.truthy(ProfileSchema.Prepare(d, cfg))
+		t.eq(d.Version, 2)
+		t.eq(d.Money, 900)
+		t.eq(#d.Hideout.Objects, #Economy.Profile.StarterHideout)
+		t.eq(d.Stats.Crafted, 0)
+	end)
+
+	t.test("v1 migration never overwrites an existing stash", function()
+		local d: any = { Version = 1, Hideout = { Objects = { "rug,0,0,0" } } }
+		t.truthy(ProfileSchema.Prepare(d, cfg))
+		t.eq(#d.Hideout.Objects, 1)
+	end)
+
+	t.test("weapon price is kept when valid", function()
+		local d = ProfileSchema.Sanitize({
+			Weapons = {
+				{ id = "a", parts = { Body = "street_body" }, price = 250 },
+				{ id = "b", parts = { Body = "street_body" }, price = -3 },
+				{ id = "c", parts = { Body = "street_body" }, price = 0 / 0 },
+			},
+		}, cfg)
+		t.eq(d.Weapons[1].price, 250)
+		t.eq(d.Weapons[2].price, nil)
+		t.eq(d.Weapons[3].price, nil)
+	end)
+
+	t.test("stats are sanitized", function()
+		local d = ProfileSchema.Sanitize({ Stats = { Crafted = -1, Sold = 3.7, Earned = "x" } }, cfg)
+		t.eq(d.Stats.Crafted, 0)
+		t.eq(d.Stats.Sold, 3)
+		t.eq(d.Stats.Earned, 0)
 	end)
 end

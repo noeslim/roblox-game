@@ -12,31 +12,22 @@ local Parts = require(Shared.Config.Parts)
 local DataConfig = require(Shared.Config.Data)
 local Ledger = require(Shared.Logic.Ledger)
 local ProfileSchema = require(Shared.Logic.ProfileSchema)
+local Progression = require(Shared.Logic.Progression)
+local WeaponCrafting = require(Shared.Logic.WeaponCrafting)
+local ServerNet = require(script.Parent.Parent.Lib.ServerNet)
 local ProfileStore = require(script.Parent.Parent.Packages.ProfileStore) :: any
 
-local SCHEMA_CONFIG: ProfileSchema.SchemaConfig = {
-	startingMoney = Economy.StartingMoney,
-	maxMoney = Economy.MaxMoney,
-	starterParts = Economy.Profile.StarterParts,
-	maxPartStack = Economy.Profile.MaxPartStack,
-	maxWeapons = Economy.Profile.MaxWeapons,
-	maxLevel = Economy.Profile.MaxLevel,
-	maxWeaponNameLength = Economy.Profile.MaxWeaponNameLength,
-	parts = Parts,
-}
+local SCHEMA_CONFIG = ProfileSchema.ConfigFrom(Economy, Parts)
 
-local KICK_LOAD_FAILED = "Impossible de charger tes données. Reviens dans une minute."
-local KICK_SESSION_ENDED = "Ta session a été ouverte sur un autre serveur."
-local KICK_FUTURE_VERSION = "Ce serveur est trop ancien pour ta sauvegarde. Rejoins un autre serveur."
+local KICK_LOAD_FAILED = "Could not load your data. Please come back in a minute."
+local KICK_SESSION_ENDED = "Your session was opened on another server."
+local KICK_FUTURE_VERSION = "This server is outdated. Please join another server."
 
 local DataService = {}
 
--- Fires (player) once the profile is loaded and the Ledger is ready.
-local loadedEvent = Instance.new("BindableEvent")
-DataService.PlayerLoaded = loadedEvent.Event
-
 type Session = { profile: any, ledger: Ledger.Ledger }
 local sessions: { [Player]: Session } = {}
+local loadedCallbacks: { (Player) -> () } = {}
 
 local store = ProfileStore.New(DataConfig.StoreName, ProfileSchema.Template(SCHEMA_CONFIG))
 if RunService:IsStudio() and DataConfig.UseMockInStudio then
@@ -46,6 +37,8 @@ end
 local function publish(player: Player, data: ProfileSchema.ProfileData)
 	player:SetAttribute("Money", data.Money)
 	player:SetAttribute("Level", data.Level)
+	player:SetAttribute("Xp", data.Xp)
+	player:SetAttribute("XpToNext", Progression.XpToNext(data.Level, Economy.Progression))
 end
 
 -- Studio only: from the command bar (Server view), `game.Players.NAME:SetAttribute("DebugGrant", 100)`.
@@ -108,7 +101,10 @@ local function onPlayerAdded(player: Player)
 	publish(player, data)
 	watchDebugGrant(player, ledger)
 	print(("[DataService] loaded %s ($%d, v%d)"):format(player.Name, data.Money, data.Version))
-	loadedEvent:Fire(player)
+	DataService.Sync(player)
+	for _, callback in loadedCallbacks do
+		task.spawn(callback, player)
+	end
 end
 
 local function onPlayerRemoving(player: Player)
@@ -120,10 +116,19 @@ local function onPlayerRemoving(player: Player)
 end
 
 function DataService:Start()
+	ServerNet.Setup()
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	Players.PlayerRemoving:Connect(onPlayerRemoving)
 	for _, player in Players:GetPlayers() do
 		task.spawn(onPlayerAdded, player)
+	end
+end
+
+-- Calls `callback(player)` for every player whose data is loaded, now and in the future.
+function DataService.OnPlayerLoaded(callback: (Player) -> ())
+	table.insert(loadedCallbacks, callback)
+	for player in sessions do
+		task.spawn(callback, player)
 	end
 end
 
@@ -140,6 +145,81 @@ end
 function DataService.GetData(player: Player): ProfileSchema.ProfileData?
 	local session = sessions[player]
 	return session and session.profile.Data
+end
+
+function DataService.GetBrand(player: Player): string
+	return player.DisplayName
+end
+
+-- Finds a weapon by id. Returns (index, savedData, computedWeapon) or nil.
+function DataService.FindWeapon(player: Player, weaponId: any): (number?, ProfileSchema.WeaponData?, WeaponCrafting.Weapon?)
+	local data = DataService.GetData(player)
+	if data == nil or type(weaponId) ~= "string" then
+		return nil, nil, nil
+	end
+	for i, w in data.Weapons do
+		if w.id == weaponId then
+			local crafted = WeaponCrafting.Craft(w.parts, DataService.GetBrand(player), Parts, Economy)
+			return i, w, crafted
+		end
+	end
+	return nil, nil, nil
+end
+
+-- Adds XP, handles level ups (attributes + LevelUp event).
+function DataService.AddXp(player: Player, amount: number)
+	local data = DataService.GetData(player)
+	if data == nil then
+		return
+	end
+	local level, xp, gained = Progression.AddXp(data.Level, data.Xp, amount, Economy.Progression, Economy.Profile.MaxLevel)
+	data.Level, data.Xp = level, xp
+	publish(player, data)
+	if gained > 0 then
+		ServerNet.FireClient("LevelUp", player, level)
+	end
+end
+
+-- Snapshot sent to the owner's client (UI only: the server never trusts it back).
+function DataService.Snapshot(player: Player): any
+	local data = DataService.GetData(player)
+	if data == nil then
+		return nil
+	end
+	local brand = DataService.GetBrand(player)
+	local weapons = {}
+	for _, w in data.Weapons do
+		local crafted = WeaponCrafting.Craft(w.parts, brand, Parts, Economy)
+		if crafted then
+			table.insert(weapons, {
+				id = w.id,
+				name = w.name or "Blaster",
+				parts = table.clone(w.parts),
+				rarity = crafted.rarity,
+				value = crafted.value,
+				suggestedPrice = crafted.suggestedPrice,
+				price = w.price or crafted.suggestedPrice,
+				stats = crafted.stats,
+				contraband = crafted.contraband,
+				fullSet = crafted.fullSet,
+			})
+		end
+	end
+	return {
+		Money = data.Money,
+		Level = data.Level,
+		Brand = brand,
+		Parts = table.clone(data.Parts),
+		Weapons = weapons,
+		Stats = table.clone(data.Stats),
+	}
+end
+
+function DataService.Sync(player: Player)
+	local snapshot = DataService.Snapshot(player)
+	if snapshot then
+		ServerNet.FireClient("DataSync", player, snapshot)
+	end
 end
 
 return DataService

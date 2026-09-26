@@ -105,6 +105,11 @@ function WeaponCrafting.Craft(partIds: { [string]: string }, brand: string, cata
 	}, nil
 end
 
+-- Default display name, e.g. "Street Blaster #12" or "Custom Blaster #3".
+function WeaponCrafting.DefaultName(weapon: { fullSet: string? }, serial: number): string
+	return (weapon.fullSet or "Custom") .. " Blaster #" .. tostring(serial)
+end
+
 -- Commission paid to the brand owner when their weapon gets a K.O.
 function WeaponCrafting.KnockoutCommission(weaponValue: number, economy: any): number
 	local c = economy.BrandCommission

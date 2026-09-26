@@ -9,16 +9,23 @@
 
 local ProfileSchema = {}
 
-ProfileSchema.VERSION = 1
+ProfileSchema.VERSION = 2
 
 export type WeaponData = {
 	id: string,
 	parts: { [string]: string }, -- slot -> part id
 	name: string?,
+	price: number?, -- price chosen by the dealer; nil = suggested price
 }
 
 export type HideoutData = {
-	Objects: { any }, -- filled by BuildService (ROADMAP 1.2)
+	Objects: { string }, -- "buildableId,x,z,rotation" (see Logic/Hideout)
+}
+
+export type StatsData = {
+	Crafted: number,
+	Sold: number,
+	Earned: number,
 }
 
 export type ProfileData = {
@@ -29,6 +36,7 @@ export type ProfileData = {
 	Parts: { [string]: number }, -- part id -> count
 	Weapons: { WeaponData },
 	Hideout: HideoutData,
+	Stats: StatsData,
 }
 
 export type SchemaConfig = {
@@ -39,15 +47,40 @@ export type SchemaConfig = {
 	maxWeapons: number,
 	maxLevel: number,
 	maxWeaponNameLength: number,
+	maxHideoutObjects: number,
+	starterHideout: { string },
 	parts: { [string]: any }, -- the parts catalogue (Config/Parts); only `.slot` is read
 }
 
-export type Migration = (data: any) -> ()
+-- Builds the SchemaConfig from Config/Economy and Config/Parts.
+function ProfileSchema.ConfigFrom(economy: any, parts: { [string]: any }): SchemaConfig
+	local p = economy.Profile
+	return {
+		startingMoney = economy.StartingMoney,
+		maxMoney = economy.MaxMoney,
+		starterParts = p.StarterParts,
+		maxPartStack = p.MaxPartStack,
+		maxWeapons = p.MaxWeapons,
+		maxLevel = p.MaxLevel,
+		maxWeaponNameLength = p.MaxWeaponNameLength,
+		maxHideoutObjects = economy.Building.MaxObjectsExtended,
+		starterHideout = p.StarterHideout,
+		parts = parts,
+	}
+end
+
+export type Migration = (data: any, cfg: SchemaConfig) -> ()
 
 -- Migrations[v] upgrades a profile from version v to v + 1. Version 0 = profile saved before versioning.
 ProfileSchema.Migrations = {
-	[0] = function(data: any)
+	[0] = function(data: any, cfg: SchemaConfig)
 		-- nothing to convert: the missing fields are filled by Sanitize
+	end,
+	[1] = function(data: any, cfg: SchemaConfig)
+		-- v2 introduced building: v1 stashes were always empty, give them the starter furniture
+		if type(data.Hideout) ~= "table" or type(data.Hideout.Objects) ~= "table" or #data.Hideout.Objects == 0 then
+			data.Hideout = { Objects = table.clone(cfg.starterHideout) }
+		end
 	end,
 } :: { [number]: Migration }
 
@@ -70,13 +103,14 @@ function ProfileSchema.Template(cfg: SchemaConfig): ProfileData
 		Xp = 0,
 		Parts = table.clone(cfg.starterParts),
 		Weapons = {},
-		Hideout = { Objects = {} },
+		Hideout = { Objects = table.clone(cfg.starterHideout) },
+		Stats = { Crafted = 0, Sold = 0, Earned = 0 },
 	}
 end
 
 -- Upgrades `data` to `target` (default: VERSION). Returns (ok, errorCode).
 -- "FutureVersion": the profile was saved by a newer server; it must NOT be loaded or overwritten.
-function ProfileSchema.Migrate(data: any, migrations: { [number]: Migration }?, target: number?): (boolean, string?)
+function ProfileSchema.Migrate(data: any, cfg: SchemaConfig, migrations: { [number]: Migration }?, target: number?): (boolean, string?)
 	if type(data) ~= "table" then
 		return false, "NotATable"
 	end
@@ -96,7 +130,7 @@ function ProfileSchema.Migrate(data: any, migrations: { [number]: Migration }?, 
 		if migrate == nil then
 			return false, "MissingMigration"
 		end
-		migrate(data)
+		migrate(data, cfg)
 		version += 1
 		data.Version = version
 	end
@@ -122,7 +156,11 @@ local function sanitizeWeapon(w: any, cfg: SchemaConfig): WeaponData?
 	if type(w.name) == "string" then
 		name = string.sub(w.name, 1, cfg.maxWeaponNameLength)
 	end
-	return { id = w.id, parts = parts, name = name }
+	local price: number? = nil
+	if isFiniteNumber(w.price) and w.price >= 1 then
+		price = math.floor(w.price)
+	end
+	return { id = w.id, parts = parts, name = name, price = price }
 end
 
 -- Fills missing fields and clamps everything to legal values (corrupted or tampered saves).
@@ -158,16 +196,29 @@ function ProfileSchema.Sanitize(data: any, cfg: SchemaConfig): ProfileData
 	end
 	data.Weapons = weapons
 
-	if type(data.Hideout) ~= "table" or type(data.Hideout.Objects) ~= "table" then
-		data.Hideout = { Objects = {} }
+	local objects: { string } = {}
+	if type(data.Hideout) == "table" and type(data.Hideout.Objects) == "table" then
+		for _, s in ipairs(data.Hideout.Objects) do
+			if type(s) == "string" and #objects < cfg.maxHideoutObjects then
+				table.insert(objects, s)
+			end
+		end
 	end
+	data.Hideout = { Objects = objects }
+
+	local stats = if type(data.Stats) == "table" then data.Stats else {}
+	data.Stats = {
+		Crafted = wholeInRange(stats.Crafted, 0, math.huge, 0),
+		Sold = wholeInRange(stats.Sold, 0, math.huge, 0),
+		Earned = wholeInRange(stats.Earned, 0, math.huge, 0),
+	}
 
 	return data :: ProfileData
 end
 
 -- Migrate + Sanitize. Returns (ok, errorCode).
 function ProfileSchema.Prepare(data: any, cfg: SchemaConfig): (boolean, string?)
-	local ok, err = ProfileSchema.Migrate(data)
+	local ok, err = ProfileSchema.Migrate(data, cfg)
 	if not ok then
 		return false, err
 	end

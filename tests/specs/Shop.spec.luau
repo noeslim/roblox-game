@@ -1,0 +1,35 @@
+local Shop = require("../../src/shared/Logic/Shop")
+local Parts = require("../../src/shared/Config/Parts")
+local Economy = require("../../src/shared/Config/Economy")
+
+return function(t)
+	t.test("supplier sells common and uncommon, not contraband or rare", function()
+		t.eq(Shop.PartPrice(Parts.street_body, Economy), 40)
+		t.eq(Shop.PartPrice(Parts.neon_body, Economy), 96) -- 60 x 1.6
+		t.eq(Shop.PartPrice(Parts.ghost_body, Economy), nil)
+		t.eq(Shop.PartPrice(Parts.gold_stock, Economy), nil)
+		t.eq(Shop.PartPrice(nil, Economy), nil)
+	end)
+
+	t.test("catalogue lists only sold parts, grouped by slot", function()
+		local list = Shop.Catalogue(Parts, Economy)
+		t.eq(#list, 10)
+		t.eq(Parts[list[1]].slot, "Body")
+		t.eq(Parts[list[#list]].slot, "Magazine")
+	end)
+
+	t.test("price validation", function()
+		t.truthy(Shop.ValidatePrice(200, 163, Economy))
+		t.eq(select(2, Shop.ValidatePrice(0, 163, Economy)), "PriceTooLow")
+		t.eq(select(2, Shop.ValidatePrice(163 * 5 + 1, 163, Economy)), "PriceTooHigh")
+		t.eq(select(2, Shop.ValidatePrice(10.5, 163, Economy)), "InvalidPrice")
+		t.eq(select(2, Shop.ValidatePrice(0 / 0, 163, Economy)), "InvalidPrice")
+		t.eq(select(2, Shop.ValidatePrice("100", 163, Economy)), "InvalidPrice")
+	end)
+
+	t.test("price steps are clamped", function()
+		t.eq(Shop.StepPrice(228, 1, 228, 163, Economy), 239)
+		t.eq(Shop.StepPrice(5, -10, 228, 163, Economy), 1)
+		t.eq(Shop.StepPrice(810, 10, 228, 163, Economy), 815)
+	end)
+end

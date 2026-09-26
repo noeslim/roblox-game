@@ -20,6 +20,35 @@ Economy.Profile = {
 	MaxWeapons = 200,
 	MaxLevel = 100,
 	MaxWeaponNameLength = 24,
+	-- furniture a brand-new player starts with ("buildableId,x,z,rotation", plot-local studs)
+	StarterHideout = {
+		"counter_folding,0,14,0",
+		"workbench_basic,-14,-18.5,0",
+		"storage_crate,17.5,-19.5,0",
+		"storage_crate,20.5,-19.5,0",
+	},
+}
+
+-- Legal supplier (parts shop at the workbench) -------------------------------
+Economy.Supplier = {
+	Rarities = { "Common", "Uncommon" }, -- rarer parts come from the black market (phase 2)
+	PriceMultiplier = 1, -- price = part value x rarity multiplier x this
+	MaxBuyPerRequest = 10,
+}
+
+-- Weapon prices set by the dealer ---------------------------------------------
+Economy.Pricing = {
+	MinPrice = 1,
+	MaxPriceMultiplier = 5, -- max price = weapon value x this
+	PriceStep = 0.05, -- +/- buttons change the price by 5% of the suggested price
+}
+
+-- Dealer level ------------------------------------------------------------------
+Economy.Progression = {
+	XpPerSale = 10,
+	XpPerCraft = 5,
+	XpBase = 100, -- xp needed from level 1 to 2
+	XpGrowth = 1.25, -- each level needs 25% more
 }
 
 -- Rarity ------------------------------------------------------------------
@@ -46,6 +75,7 @@ Economy.Crafting = {
 	Slots = { "Body", "Barrel", "Stock", "Sight", "Magazine" },
 	FullSetBonus = 0.25, -- +25% value when all 5 parts share a set
 	SuggestedPriceMultiplier = 1.4,
+	WorkbenchRange = 14, -- studs between the player and their workbench to craft
 }
 
 -- Sales / combo -------------------------------------------------------------
@@ -75,6 +105,18 @@ Economy.Customers = {
 	},
 	-- how far above a customer's budget a Cheap/Shady customer will still counter-offer
 	NegotiationTolerance = 0.25,
+	SpawnIntervalMin = 10, -- seconds between two customers for one stash
+	SpawnIntervalMax = 22,
+	MaxQueue = 4,
+	WalkSpeed = 12,
+	MaxServeDistance = 16, -- dealer must be this close to the customer to sell
+	QueueSpacing = 3.5,
+	-- how many studs in front of the counter the first customer stands
+	CounterGap = 2.5,
+	-- the customer leaves if they could not reach the queue in this many seconds
+	MaxWalkSeconds = 40,
+	RefusePatiencePenalty = 4, -- seconds of patience lost per refused offer
+	BigSaleTotal = 500, -- a sale worth this much triggers the "big order" effects
 }
 
 -- Heat & raids ------------------------------------------------------------
@@ -115,6 +157,9 @@ Economy.Building = {
 	MaxObjects = 400,
 	MaxObjectsExtended = 800,
 	SellRefundRate = 0.5,
+	PlotSizeX = 48,
+	PlotSizeZ = 48,
+	PlotMaxHeight = 30,
 }
 
 return Economy
