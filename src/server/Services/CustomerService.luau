@@ -18,6 +18,7 @@ local PlotUtil = require(Shared.Visual.PlotUtil)
 local BuildService = require(script.Parent.BuildService)
 local PlotService = require(script.Parent.PlotService)
 local NpcMover = require(script.Parent.Parent.Lib.NpcMover)
+local AnimServer = require(script.Parent.Parent.Lib.AnimServer)
 
 local CustomerService = {}
 
@@ -41,6 +42,7 @@ export type Npc = {
 	bar: Frame?,
 	sayLabel: TextLabel?,
 	sayToken: number,
+	leaveDelay: number?, -- seconds to stay before walking away (deal scene)
 }
 
 type Stash = {
@@ -315,12 +317,16 @@ local function destroyNpc(npc: Npc)
 end
 
 -- Makes the customer leave. `lineKey` = a Messages.CustomerLines key, or nil to leave silently.
-function CustomerService.Dismiss(npc: Npc, lineKey: string?)
+function CustomerService.Dismiss(npc: Npc, lineKey: string?, leaveDelay: number?)
 	if npc.state == "Leaving" then
 		return
 	end
 	npc.state = "Leaving"
 	npc.pending = nil
+	npc.leaveDelay = leaveDelay
+	if lineKey == "Angry" then
+		AnimServer.Play(npc.model, "ShakeHead")
+	end
 	local stash = stashes[npc.owner]
 	if stash then
 		stash.queue:Leave(npc.id)
@@ -403,6 +409,7 @@ local function runNpc(stash: Stash, npc: Npc)
 				if npc.frontSince == nil then
 					npc.frontSince = os.clock()
 					CustomerService.SayLine(npc, "Greet")
+					AnimServer.Emote(npc.humanoid, "Wave")
 				end
 				if npc.prompt then
 					npc.prompt.Enabled = true
@@ -414,7 +421,7 @@ local function runNpc(stash: Stash, npc: Npc)
 
 	-- 3. leave the way it came, then vanish
 	if stash.alive and npc.model.Parent then
-		task.wait(1.5)
+		task.wait(npc.leaveDelay or 1.5)
 		NpcMover.WalkTo(npc.humanoid, npc.root, npc.exit, CFG.MaxWalkSeconds, function()
 			return not stash.alive
 		end)
@@ -486,6 +493,11 @@ local function spawnCustomer(stash: Stash)
 		pcall(function()
 			root:SetNetworkOwner(nil)
 		end)
+		local animate = model:FindFirstChild("Animate")
+		if animate then
+			animate:Destroy() -- LocalScripts don't run on NPCs: the server animates them
+		end
+		AnimServer.SetupNpc(humanoid)
 
 		stash.npcs[id] = npc
 		npcsById[id] = npc

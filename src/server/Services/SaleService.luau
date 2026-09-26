@@ -9,6 +9,8 @@ local Customer = require(Shared.Logic.Customer)
 local DataService = require(script.Parent.DataService)
 local CustomerService = require(script.Parent.CustomerService)
 local ServerNet = require(script.Parent.Parent.Lib.ServerNet)
+local AnimServer = require(script.Parent.Parent.Lib.AnimServer)
+local Animations = require(Shared.Config.Animations)
 
 local SaleService = {}
 
@@ -56,7 +58,23 @@ local function completeSale(player: Player, npc: CustomerService.Npc, weaponId: 
 	DataService.AddXp(player, Economy.Progression.XpPerSale)
 	DataService.Sync(player)
 
-	CustomerService.Dismiss(npc, "Thanks")
+	-- deal scene: handshake, the dealer counts the cash, the customer inspects the weapon, then leaves
+	local dealer = player.Character
+	local dealerRoot = dealer and dealer:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if dealerRoot then
+		AnimServer.Face(npc.root, dealerRoot.Position)
+	end
+	AnimServer.Play(npc.model, "Handshake")
+	AnimServer.Play(dealer, "Handshake")
+	local parts = table.clone(saved.parts)
+	task.delay(Animations.Deal.HandshakeSeconds, function()
+		AnimServer.Play(dealer, "CountMoney")
+		if npc.model.Parent then
+			AnimServer.AttachWeapon(npc.model, parts, weapon.rarity)
+			AnimServer.Play(npc.model, "Inspect")
+		end
+	end)
+	CustomerService.Dismiss(npc, "Thanks", Animations.Deal.CustomerLeaveDelay)
 	local info = {
 		ownerUserId = player.UserId,
 		position = npc.root.Position,
@@ -84,6 +102,7 @@ local function sell(player: Player, customerId: any, weaponId: any): (boolean, a
 	end
 	if not Customer.IsInterested(npc.data, weapon, Economy.RarityOrder) then
 		CustomerService.SayLine(npc, "NotInterested")
+		AnimServer.Play(npc.model, "ShakeHead")
 		return true, { decision = "NotInterested" }
 	end
 
@@ -100,11 +119,13 @@ local function sell(player: Player, customerId: any, weaponId: any): (boolean, a
 	elseif decision == "Counter" and counterPrice then
 		npc.pending = { weaponId = saved.id, price = counterPrice }
 		CustomerService.SayLine(npc, "Counter", counterPrice)
+		AnimServer.Play(npc.model, "Shrug")
 		return true, { decision = "Counter", price = counterPrice }
 	end
 	npc.pending = nil
 	CustomerService.PenalizePatience(npc, CFG.RefusePatiencePenalty)
 	CustomerService.SayLine(npc, "Refuse")
+	AnimServer.Play(npc.model, "ShakeHead")
 	return true, { decision = "Refuse" }
 end
 

@@ -24,6 +24,7 @@ Net.Events = {
 	"CraftFx", -- server -> all: (position, partIds, rarity, value, ownerUserId)
 	"SaleFx", -- server -> all: (info table)
 	"LevelUp", -- server -> owner: (newLevel)
+	"PlayPose", -- server -> all: (model, animationName) procedural animation played by every client
 }
 
 local function folder(): Instance

@@ -12,6 +12,7 @@ local WeaponCrafting = require(Shared.Logic.WeaponCrafting)
 local DataService = require(script.Parent.DataService)
 local BuildService = require(script.Parent.BuildService)
 local ServerNet = require(script.Parent.Parent.Lib.ServerNet)
+local AnimServer = require(script.Parent.Parent.Lib.AnimServer)
 
 local CraftService = {}
 
@@ -74,6 +75,7 @@ local function craft(player: Player, partIds: any): (boolean, any)
 	DataService.AddXp(player, Economy.Progression.XpPerCraft)
 	DataService.Sync(player)
 
+	AnimServer.Play(player.Character, "Hammer")
 	ServerNet.FireAllClients("CraftFx", bench:GetPivot().Position, weapon.parts, weapon.rarity, weapon.value, player.UserId)
 	return true, {
 		id = saved.id,
