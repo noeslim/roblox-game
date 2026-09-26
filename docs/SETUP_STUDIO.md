@@ -152,6 +152,8 @@ Sans cette étape, la ville est construite à chaque lancement de serveur : ça 
 5. **File → Save**. Le streaming est activé automatiquement (Workspace → StreamingEnabled).
 6. **File → Experience Settings → Places** : **Max Players = 24**.
 
+**Important :** la Command Bar garde en mémoire les scripts déjà lancés. Après un `git pull`, **ferme et rouvre Studio** (puis reconnecte Rojo) avant de relancer la commande, sinon c'est l'ancienne version qui construit la ville. La première ligne de l'Output, `[MapBuilder] version ...`, indique la version utilisée.
+
 Pour régénérer la ville (après une mise à jour de Claude), relance la même commande : elle remplace `City` et `Hideouts`. Si tu as retouché la map à la main, fais une copie avant.
 
 ![Aperçu de la ville](img/city_overview.png)
