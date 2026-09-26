@@ -189,7 +189,8 @@ function CityParts.Interior(archetype: any, seed: number, cfg: any): ({ PartSpec
 		add("CouchBack", 6, 2.2, 0.8, -10, 1.6, Z0 + 1.9, "Fabric", "#4A3A2E")
 		table.insert(parts, { name = "TrashBag", shape = "Ball", size = v(2, 1.8, 2), pos = v(X1 - 2, F + 0.9, Z1 - 3), material = "Plastic", color = "#141416" })
 		add("Radiator", 3, 2.2, 0.5, -3, 0.4, Z0 + 0.3, "Metal", "#8A8A82")
-		light(0, ih - F - 1.5, 0, "#FFD9A0", 22, 0.8)
+		light(-6, ih - F - 1.5, 0, "#FFD9A0", 24, 1.1)
+		light(10, ih - F - 1.5, Z0 + 4, "#FFE2B0", 18, 0.9) -- over the stairs
 	elseif kind == "office" then
 		add("Desk", 10, 3.6, 2.5, 0, 0, -4, "Marble", "#2E2E34")
 		add("LogoWall", 14, 6, 0.4, 0, 1.5, Z0 + 0.2, "SmoothPlastic", "#1E2230")
