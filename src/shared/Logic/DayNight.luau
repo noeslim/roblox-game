@@ -12,9 +12,24 @@ export type PhaseInfo = {
 	clockTime: number, -- 0..24, for Lighting.ClockTime
 }
 
-function DayNight.Get(now: number, cfg: { DayLength: number, NightLength: number }): PhaseInfo
+export type DayNightConfig = {
+	DayLength: number,
+	NightLength: number,
+	-- optional clock ranges (hours). Skipping the dusk/dawn hours avoids long red sunsets.
+	DayClockStart: number?, -- default 6
+	DayClockEnd: number?, -- default 18
+	NightClockStart: number?, -- default 18
+	NightClockEnd: number?, -- default 6 (next morning)
+}
+
+function DayNight.Get(now: number, cfg: DayNightConfig): PhaseInfo
 	local cycle = cfg.DayLength + cfg.NightLength
 	local t = now % cycle
+	local dayStart = cfg.DayClockStart or 6
+	local dayEnd = cfg.DayClockEnd or 18
+	local nightStart = cfg.NightClockStart or 18
+	local nightEnd = cfg.NightClockEnd or 6
+	local nightSpan = (nightEnd - nightStart) % 24
 
 	if t < cfg.DayLength then
 		local progress = t / cfg.DayLength
@@ -22,7 +37,7 @@ function DayNight.Get(now: number, cfg: { DayLength: number, NightLength: number
 			phase = "Day",
 			progress = progress,
 			secondsLeft = cfg.DayLength - t,
-			clockTime = 6 + progress * 12, -- 06:00 -> 18:00
+			clockTime = dayStart + progress * (dayEnd - dayStart),
 		}
 	end
 
@@ -32,7 +47,7 @@ function DayNight.Get(now: number, cfg: { DayLength: number, NightLength: number
 		phase = "Night",
 		progress = progress,
 		secondsLeft = cfg.NightLength - nt,
-		clockTime = (18 + progress * 12) % 24, -- 18:00 -> 06:00
+		clockTime = (nightStart + progress * nightSpan) % 24,
 	}
 end
 

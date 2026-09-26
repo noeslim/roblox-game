@@ -111,10 +111,10 @@ local function buildStreetLight(parent: Instance, x: number, z: number, groundY:
 	CollectionService:AddTag(head, NIGHT_GLOW_TAG)
 	local light = Instance.new("SpotLight")
 	light.Face = Enum.NormalId.Bottom
-	light.Angle = 100
-	light.Range = 40
-	light.Brightness = 3
-	light.Color = hex(cfg.StreetLight)
+	light.Angle = World.StreetLight.Angle
+	light.Range = World.StreetLight.Range
+	light.Brightness = World.StreetLight.Brightness
+	light.Color = hex(World.StreetLight.Color)
 	light.Shadows = false
 	light.Parent = head
 	CollectionService:AddTag(light, NIGHT_LIGHT_TAG)
@@ -177,8 +177,8 @@ local function buildBuildings(parent: Instance, rng: Random, side: number, groun
 			surfaceText(board, Enum.NormalId.Front, pick(rng, World.Signs), signColor, Enum.Font.Arcade)
 			local light = Instance.new("PointLight")
 			light.Color = hex(signColor)
-			light.Range = 24
-			light.Brightness = 2
+			light.Range = 18
+			light.Brightness = 1.2
 			light.Shadows = false
 			light.Parent = board
 			CollectionService:AddTag(light, NIGHT_LIGHT_TAG)
@@ -276,9 +276,18 @@ end
 
 local function setupLighting()
 	local L = World.Lighting
+	-- only one Atmosphere can be active: the Baseplate template ships a brownish one, set it aside
+	-- for this play session (nothing is saved, your place file keeps it)
+	for _, child in Lighting:GetChildren() do
+		if child:IsA("Atmosphere") and child.Name ~= "BM_Atmosphere" then
+			child.Parent = nil
+		end
+	end
 	local atmosphere = ensureEffect("Atmosphere", "BM_Atmosphere") :: Atmosphere
 	atmosphere.Density = L.Atmosphere.Density
 	atmosphere.Haze = L.Atmosphere.Haze
+	atmosphere.Glare = L.Atmosphere.Glare
+	atmosphere.Offset = 0
 	atmosphere.Color = hex(L.Atmosphere.Color)
 	atmosphere.Decay = hex(L.Atmosphere.Decay)
 	local bloom = ensureEffect("BloomEffect", "BM_Bloom") :: BloomEffect

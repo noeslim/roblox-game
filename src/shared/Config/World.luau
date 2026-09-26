@@ -42,10 +42,13 @@ return {
 	-- Lighting presets applied by WorldService when the phase changes
 	Lighting = {
 		TweenSeconds = 8,
-		Day = { Brightness = 2, Ambient = "#5A5A6E", OutdoorAmbient = "#8C8CA0", FogColor = "#9AA3B8", ExposureCompensation = 0 },
-		Night = { Brightness = 0.4, Ambient = "#1E1630", OutdoorAmbient = "#2A2046", FogColor = "#1A1430", ExposureCompensation = 0.3 },
-		Atmosphere = { Density = 0.35, Haze = 1.5, Color = "#C7C0E0", Decay = "#6A5A8C" },
-		Bloom = { Intensity = 0.6, Size = 30, Threshold = 1.2 },
-		ColorCorrection = { Saturation = 0.1, Contrast = 0.1, TintColor = "#F2ECFF" },
+		Day = { Brightness = 2.2, Ambient = "#6E6E80", OutdoorAmbient = "#9A9AB0", FogColor = "#9AA3B8", ExposureCompensation = 0 },
+		Night = { Brightness = 1, Ambient = "#34304A", OutdoorAmbient = "#454368", FogColor = "#10121E", ExposureCompensation = 0 },
+		-- no haze/glare: they turn the whole street red at sunset
+		Atmosphere = { Density = 0.25, Haze = 0, Glare = 0, Color = "#9FA8C8", Decay = "#3A3F5C" },
+		Bloom = { Intensity = 0.4, Size = 24, Threshold = 1.6 }, -- only neon glows
+		ColorCorrection = { Saturation = 0.05, Contrast = 0.08, TintColor = "#FFFFFF" },
 	},
+
+	StreetLight = { Brightness = 1.3, Range = 26, Angle = 90, Color = "#FFC48A" },
 }

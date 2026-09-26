@@ -146,6 +146,11 @@ Economy.Heat = {
 Economy.DayNight = {
 	DayLength = 600,
 	NightLength = 360,
+	-- Lighting.ClockTime ranges: jumping over dusk/dawn avoids long red sunsets in the fog
+	DayClockStart = 7,
+	DayClockEnd = 17,
+	NightClockStart = 19.5,
+	NightClockEnd = 4.5,
 	NightContrabandPriceMultiplier = 1.5,
 }
 
