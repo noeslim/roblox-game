@@ -74,12 +74,14 @@ return {
 		WeaponScale = 0.55, -- same as the weapon customers carry (AnimServer)
 		CustomerGrip = { y = -0.25, z = -0.4, yaw = 90 }, -- same as AnimServer.AttachWeapon
 
-		Fov = 62,
+		Fov = 70,
+		HandScale = 0.6, -- your hands (blocky avatar hands look huge this close to the camera)
 		CounterGap = 0.02, -- things rest this much above the counter top
 		-- positions on the counter, relative to its middle (+Z = your side, -Z = the customer's side)
 		PlaceSpot = { x = 0.35, z = 0.15 }, -- where you lay the weapon
 		CashFrom = { x = -0.15, z = -0.75 }, -- the customer puts the cash here...
 		CashTo = { x = -0.4, z = 0.2 }, -- ...and slides it to you
+		RestHand = { x = 0.6, y = -1.05, z = -1.0 }, -- a free hand, camera space (below the screen)
 		CountHold = { x = -0.25, y = -0.6, z = -1.15 }, -- the cash in your left hand, camera space
 		Bills = 10, -- bills flicked while counting
 		HandFollow = 16,

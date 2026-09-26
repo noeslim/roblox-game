@@ -123,8 +123,10 @@ function DealPoses.new(deps: Deps, cfg: any)
 		return ctx.countHold
 	end
 
+	-- a free hand waits low, under the bottom of the screen (it only shows when it does something)
 	function P.Rest(ctx: any, side: number): any
-		return palm((ctx.cam * CF.new(0.55 * side, -0.6, -1.15)).Position, ctx.eye)
+		local r = cfg.RestHand
+		return palm((ctx.cam * CF.new(r.x * side, r.y, r.z)).Position, ctx.eye)
 	end
 
 	-- target palms (right, left). shakeAt: where the customer's hand is (or nil)

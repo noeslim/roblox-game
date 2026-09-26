@@ -3,8 +3,10 @@
 -- hands and forearms, or simple blocks), hiding the character, letterbox bars, one-shot sounds.
 -- Hand settings come from Config/Cinematics.Craft (AvatarHands, AvatarHandFlip, colors).
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
+local StarterGui = game:GetService("StarterGui")
 
 local Cinematics = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("Cinematics"))
 local UI = require(script.Parent.UI)
@@ -70,7 +72,7 @@ function FirstPerson.Piece(name: string, size: Vector3, color: Color3, material:
 end
 
 -- A hand: the avatar's own hand and lower arm when it has R15 parts, simple blocks otherwise.
-export type Hand = { hand: BasePart, arm: BasePart, fingers: BasePart?, thumb: BasePart?, side: number, avatar: boolean }
+export type Hand = { hand: BasePart, arm: BasePart, fingers: BasePart?, thumb: BasePart?, side: number, avatar: boolean, scale: number }
 
 local function cloneLimb(name: string, parent: Instance): BasePart?
 	local character = player.Character
@@ -101,14 +103,18 @@ local function cloneLimb(name: string, parent: Instance): BasePart?
 	return part
 end
 
-function FirstPerson.MakeHand(side: number, parent: Instance): Hand
+-- scale: 1 = the avatar's real size (seen from very close, blocky avatar hands look huge)
+function FirstPerson.MakeHand(side: number, parent: Instance, scale: number?): Hand
+	local k = scale or 1
 	local prefix = if side == 1 then "Right" else "Left"
 	local hand = if C.AvatarHands then cloneLimb(prefix .. "Hand", parent) else nil
 	local arm = if C.AvatarHands then cloneLimb(prefix .. "LowerArm", parent) else nil
 	if hand and arm then
 		arm.Color = Color3.fromHex(C.SleeveColor) -- a sleeve; the shirt texture does not follow a copy
 		arm.Material = Enum.Material.Fabric
-		return { hand = hand, arm = arm, side = side, avatar = true }
+		hand.Size *= k
+		arm.Size *= k
+		return { hand = hand, arm = arm, side = side, avatar = true, scale = k }
 	end
 	if hand then
 		hand:Destroy()
@@ -118,12 +124,13 @@ function FirstPerson.MakeHand(side: number, parent: Instance): Hand
 	end
 	local skin = skinColor()
 	return {
-		hand = FirstPerson.Piece("Palm", Vector3.new(0.46, 0.17, 0.5), skin, Enum.Material.SmoothPlastic, parent),
-		fingers = FirstPerson.Piece("Fingers", Vector3.new(0.44, 0.14, 0.34), skin, Enum.Material.SmoothPlastic, parent),
-		thumb = FirstPerson.Piece("Thumb", Vector3.new(0.14, 0.14, 0.3), skin, Enum.Material.SmoothPlastic, parent),
-		arm = FirstPerson.Piece("Forearm", Vector3.new(0.44, 0.44, 1), Color3.fromHex(C.SleeveColor), Enum.Material.Fabric, parent),
+		hand = FirstPerson.Piece("Palm", Vector3.new(0.46, 0.17, 0.5) * k, skin, Enum.Material.SmoothPlastic, parent),
+		fingers = FirstPerson.Piece("Fingers", Vector3.new(0.44, 0.14, 0.34) * k, skin, Enum.Material.SmoothPlastic, parent),
+		thumb = FirstPerson.Piece("Thumb", Vector3.new(0.14, 0.14, 0.3) * k, skin, Enum.Material.SmoothPlastic, parent),
+		arm = FirstPerson.Piece("Forearm", Vector3.new(0.44, 0.44, 1) * k, Color3.fromHex(C.SleeveColor), Enum.Material.Fabric, parent),
 		side = side,
 		avatar = false,
+		scale = k,
 	}
 end
 
@@ -149,17 +156,65 @@ function FirstPerson.SetHand(h: Hand, palmCF: CFrame, elbow: Vector3)
 		return
 	end
 	h.hand.CFrame = palmCF
+	local k = h.scale
 	local fingers, thumb = h.fingers, h.thumb
 	if fingers then
-		fingers.CFrame = palmCF * CFrame.new(0, -0.05, -0.38) * CFrame.Angles(math.rad(-28), 0, 0)
+		fingers.CFrame = palmCF * CFrame.new(0, -0.05 * k, -0.38 * k) * CFrame.Angles(math.rad(-28), 0, 0)
 	end
 	if thumb then
-		thumb.CFrame = palmCF * CFrame.new(-0.27 * h.side, -0.04, -0.08) * CFrame.Angles(0, math.rad(28 * h.side), 0)
+		thumb.CFrame = palmCF * CFrame.new(-0.27 * k * h.side, -0.04 * k, -0.08 * k) * CFrame.Angles(0, math.rad(28 * h.side), 0)
 	end
-	local wrist = (palmCF * CFrame.new(0, 0, 0.3)).Position
+	local wrist = (palmCF * CFrame.new(0, 0, 0.3 * k)).Position
 	local length = math.max(0.3, (elbow - wrist).Magnitude)
-	h.arm.Size = Vector3.new(0.44, 0.44, length)
+	h.arm.Size = Vector3.new(0.44 * k, 0.44 * k, length)
 	h.arm.CFrame = CFrame.lookAt((wrist + elbow) / 2, wrist)
+end
+
+-- Hides the HUD (your ScreenGuis, markers, prompts, Roblox chat / backpack) during a scene, except
+-- the guis named in `keep`. Returns the function that puts everything back as it was.
+function FirstPerson.HideHud(keep: { string }): () -> ()
+	local hidden: { LayerCollector } = {}
+	local gui = player:FindFirstChild("PlayerGui")
+	if gui then
+		for _, g in gui:GetChildren() do
+			if g:IsA("LayerCollector") and g.Enabled and not table.find(keep, g.Name) then
+				g.Enabled = false
+				table.insert(hidden, g)
+			end
+		end
+	end
+	local promptsWereOn = ProximityPromptService.Enabled
+	ProximityPromptService.Enabled = false
+	local core: { [Enum.CoreGuiType]: boolean } = {}
+	for _, kind in { Enum.CoreGuiType.Chat, Enum.CoreGuiType.Backpack, Enum.CoreGuiType.PlayerList, Enum.CoreGuiType.Health } do
+		local ok, on = pcall(function()
+			return StarterGui:GetCoreGuiEnabled(kind)
+		end)
+		if ok and on then
+			core[kind] = true
+			pcall(function()
+				StarterGui:SetCoreGuiEnabled(kind, false)
+			end)
+		end
+	end
+	local restored = false
+	return function()
+		if restored then
+			return
+		end
+		restored = true
+		for _, g in hidden do
+			if g.Parent then
+				g.Enabled = true
+			end
+		end
+		ProximityPromptService.Enabled = promptsWereOn
+		for kind in core do
+			pcall(function()
+				StarterGui:SetCoreGuiEnabled(kind, true)
+			end)
+		end
+	end
 end
 
 function FirstPerson.Letterbox(): (ScreenGui, Frame)

@@ -26,6 +26,7 @@ local CraftCinematicController = {}
 local C = Cinematics.Craft
 local player = Players.LocalPlayer
 local playing = false
+local restoreHud: (() -> ())? = nil
 local Poses = CraftPoses.new({ CFrame = CFrame, Vector3 = Vector3, Assembly = Assembly }, C, Visual.WeaponLayout, Economy.Crafting.Slots)
 
 local function revealCard(result: any): ScreenGui
@@ -42,8 +43,17 @@ local function revealCard(result: any): ScreenGui
 end
 
 -- Last resort when the scene fails to start: give everything back to the player.
+local function showHud()
+	local restore = restoreHud
+	restoreHud = nil
+	if restore then
+		restore()
+	end
+end
+
 local function emergencyRestore()
 	playing = false
+	showHud()
 	local camera = workspace.CurrentCamera
 	camera.CameraType = Enum.CameraType.Custom
 	FirstPerson.SetCharacterHidden(false)
@@ -123,6 +133,7 @@ play = function(bench: BasePart, partIds: { [string]: string }, result: any, onD
 
 	-- everything is ready: take the camera and freeze the character
 	Freeze.Set(true)
+	restoreHud = FirstPerson.HideHud({ "CraftLetterbox" })
 	FirstPerson.SetCharacterHidden(true)
 	camera.CameraType = Enum.CameraType.Scriptable
 
@@ -175,6 +186,7 @@ play = function(bench: BasePart, partIds: { [string]: string }, result: any, onD
 		camera.FieldOfView = oldFov
 		FirstPerson.SetCharacterHidden(false)
 		Freeze.Set(false)
+		showHud()
 		TweenService:Create(fade, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
 		task.delay(0.35, function()
 			barGui:Destroy()

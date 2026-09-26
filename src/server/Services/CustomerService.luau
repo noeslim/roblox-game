@@ -343,8 +343,10 @@ function CustomerService.Dismiss(npc: Npc, lineKey: string?, leaveDelay: number?
 	if lineKey == "Angry" then
 		AnimServer.Play(npc.model, "ShakeHead")
 	end
+	-- after a deal the customer stays at the counter a while (leaveDelay): it keeps its place in the
+	-- line until it walks away, so the next one does not walk into it
 	local stash = stashes[npc.owner]
-	if stash then
+	if stash and leaveDelay == nil then
 		stash.queue:Leave(npc.id)
 	end
 	if npc.prompt then
@@ -457,6 +459,7 @@ local function runNpc(stash: Stash, npc: Npc)
 	-- 3. leave the way it came, then vanish
 	if stash.alive and npc.model.Parent then
 		task.wait(npc.leaveDelay or 1.5)
+		stash.queue:Leave(npc.id) -- frees the counter for the next customer
 		local function gone(): boolean
 			return not stash.alive
 		end

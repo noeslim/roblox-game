@@ -19,6 +19,12 @@ local function inView(cam, pos, fov)
 	return p.Z < -0.3 and math.atan2(math.abs(p.X), -p.Z) < halfH and math.atan2(math.abs(p.Y), -p.Z) < halfV
 end
 
+-- under the bottom edge of the screen (a free hand waiting, or coming up from there)
+local function belowView(cam, pos, fov)
+	local p = cam:PointToObjectSpace(pos)
+	return p.Y < 0 and (p.Z >= -0.3 or math.atan2(-p.Y, -p.Z) >= math.rad(fov / 2))
+end
+
 -- a dealer behind a counter, a customer in front (several directions)
 local function scene(angle)
 	local dir = Vector3.new(math.sin(math.rad(angle)), 0, -math.cos(math.rad(angle)))
@@ -63,6 +69,12 @@ return function(t)
 		t.near(lowest(w, P.WeaponSize) - ctx.topY, C.CounterGap, 0.3)
 	end)
 
+	t.test("free hands wait under the screen", function()
+		local ctx = scene(0)
+		t.falsy(inView(ctx.cam, P.Rest(ctx, 1).Position, C.Fov))
+		t.falsy(inView(ctx.cam, P.Rest(ctx, -1).Position, C.Fov))
+	end)
+
 	t.test("arms never cross, hands and cash in view", function()
 		for _, angle in { 0, 130 } do
 			local ctx, hand = scene(angle)
@@ -72,12 +84,26 @@ return function(t)
 				local r, l = P.Hands(ctx, time, hand)
 				local rx, lx = cam:PointToObjectSpace(r.Position).X, cam:PointToObjectSpace(l.Position).X
 				t.truthy(rx > lx, ("arms crossed at t=%.2f"):format(time))
-				t.truthy(inView(cam, r.Position, C.Fov) and inView(cam, l.Position, C.Fov), ("hand out of view at t=%.2f"):format(time))
+				for _, h in { r, l } do
+					t.truthy(inView(cam, h.Position, C.Fov) or belowView(cam, h.Position, C.Fov), ("hand floating out of view at t=%.2f"):format(time))
+				end
+				-- the hands that work are seen
+				local phase = DealScene.Phase(ctx.plan, time)
+				local mid = function(a, b)
+					return math.abs(time - (a + b) / 2) < 0.05
+				end
+				if phase == "place" and mid(ctx.plan.place, ctx.plan.inspect) then
+					t.truthy(inView(cam, r.Position, C.Fov), ("right hand not seen placing at t=%.2f"):format(time))
+				elseif phase == "shake" and mid(ctx.plan.shake, ctx.plan.count) then
+					t.truthy(inView(cam, r.Position, C.Fov), ("handshake not seen at t=%.2f"):format(time))
+				elseif phase == "count" and mid(ctx.plan.count, ctx.plan.outro) then
+					t.truthy(inView(cam, r.Position, C.Fov) and inView(cam, l.Position, C.Fov), ("counting not seen at t=%.2f"):format(time))
+				end
 				local cash = P.Cash(ctx, time)
 				if cash then
 					t.truthy(inView(cam, cash.Position, C.Fov), ("cash out of view at t=%.2f"):format(time))
 				end
-				time += 0.1
+				time += 0.02
 			end
 		end
 	end)

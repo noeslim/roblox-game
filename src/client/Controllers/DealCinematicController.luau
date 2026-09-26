@@ -25,6 +25,7 @@ local DealCinematicController = {}
 local C = Cinematics.Deal
 local player = Players.LocalPlayer
 local playing = false
+local restoreHud: (() -> ())? = nil
 local Poses = DealPoses.new({ CFrame = CFrame, Vector3 = Vector3, DealScene = DealScene }, C)
 
 local CASH_COLOR = Color3.fromHex("#4F6B4A")
@@ -52,8 +53,17 @@ local function revealCard(info: any): ScreenGui
 end
 
 -- Last resort when the scene fails to start: give everything back to the player.
+local function showHud()
+	local restore = restoreHud
+	restoreHud = nil
+	if restore then
+		restore()
+	end
+end
+
 local function emergencyRestore()
 	playing = false
+	showHud()
 	workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
 	FirstPerson.SetCharacterHidden(false)
 	Freeze.Set(false)
@@ -152,12 +162,13 @@ play = function(info: any)
 		weapon = w
 	end
 	local cash = cashModel(folder)
-	local right = FirstPerson.MakeHand(1, folder)
-	local left = FirstPerson.MakeHand(-1, folder)
+	local right = FirstPerson.MakeHand(1, folder, C.HandScale)
+	local left = FirstPerson.MakeHand(-1, folder, C.HandScale)
 	local barGui, fade = FirstPerson.Letterbox()
 
 	-- everything is ready: take the camera and freeze the character
 	Freeze.Set(true)
+	restoreHud = FirstPerson.HideHud({ "CraftLetterbox" })
 	FirstPerson.SetCharacterHidden(true)
 	camera.CameraType = Enum.CameraType.Scriptable
 
@@ -213,6 +224,7 @@ play = function(info: any)
 		camera.FieldOfView = oldFov
 		FirstPerson.SetCharacterHidden(false)
 		Freeze.Set(false)
+		showHud()
 		TweenService:Create(fade, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
 		task.delay(0.35, function()
 			barGui:Destroy()
