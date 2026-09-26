@@ -42,6 +42,8 @@ Les PNJ remplissent chaque rôle quand il manque des joueurs, pour que le jeu so
 
 ## 5. Pilier 1 — La planque (construction libre)
 
+> Mise à jour : la planque est une **trap house** (belle maison dehors, business au sous-sol). Voir §20.
+
 - Chaque dealer reçoit un **terrain** (petit au départ, extensible) dans un quartier.
 - **Mode construction** (touche B / bouton mobile) : caméra aérienne, grille de 1 stud (option 0,5), rotation 45°, déplacer, supprimer, copier, annuler.
 - **Catégories d'objets** :
@@ -182,6 +184,69 @@ Les PNJ remplissent chaque rôle quand il manque des joueurs, pour que le jeu so
 - Le serveur fait autorité sur tout ce qui a de la valeur. Le client ne fait que l'affichage, les animations et envoyer des intentions.
 - Sauvegarde : ProfileStore (session locking) pour les profils et les planques sérialisées.
 - Cible mobile : budgets de parties, particules et objets par planque.
+
+## 19. La map — Black Market City
+
+![Plan de la map](img/map_plan.png)
+
+- **Taille** : environ 1 750 × 1 750 studs (ordre de grandeur de Criminality), en grille de 3 × 3 quartiers de 520 studs séparés par des avenues de 40 studs, avec un périphérique autour et la mer à l'est.
+- **Serveurs** : 18 trap houses → serveurs de **18 à 24 joueurs** (dealers + soldiers + inspecteurs).
+
+| Quartier | Rôle dans le jeu |
+|---|---|
+| **The Blocks** et **The Blocks II** | 18 trap houses (les bases des joueurs), terrain de basket, épicerie de nuit, points de recrutement |
+| **Downtown** | Place centrale (spawn), commissariat (inspecteurs), banque, écran géant des ventes |
+| **Chinatown** | Ruelle du marché noir (la nuit), néons, restaurants, événements (enchère noire) |
+| **The Docks** | Fournisseur légal (entrepôt), conteneurs, jetée de contrebande (missions) |
+| **Industrial** | Usines, gare de triage, caisses de récupération, courses-poursuites |
+| **Strip** | Station-service, bar, boutiques (cosmétiques), clients PNJ de passage |
+| **Rich Hills** | Villas, clients VIP, plus tard les maisons de prestige |
+| **War Zone** | Zone industrielle en ruine, clôturée, 5 points de contrôle A–E, spawn Rouge et spawn Bleu |
+
+### Optimisation (obligatoire, cible mobile)
+- **StreamingEnabled** activé : le téléphone ne charge que ce qui est autour du joueur. Les grands bâtiments ont `LevelOfDetail = StreamingMesh` (silhouette simplifiée au loin).
+- **Peu de modèles différents, beaucoup réutilisés** : façades modulaires (fenêtres, portes, vitrines) en meshes identiques, que Roblox affiche en un seul lot.
+- **Seulement les intérieurs utiles** : trap houses, boutiques, commissariat. Les autres immeubles sont des coquilles vides.
+- **Budget** : moins de 15 000 pièces pour toute la ville, `CanTouch` et `CanQuery` désactivés sur le décor, `CollisionFidelity = Box` sur les petits objets, lumières sans ombres sauf quelques-unes.
+- **La map est générée une fois dans Studio** (commande de construction), puis sauvegardée dans le place : elle ne se reconstruit pas à chaque serveur, et l'associé « visuel » peut la retoucher à la main.
+
+## 20. La trap house (la base du dealer)
+
+- **Dehors, une belle maison** : façade soignée, porche, garage, jardin, clôture, boîte aux lettres, néon « OPEN » quand le dealer vend. De l'extérieur, rien ne dit que c'est une planque. Trois niveaux de maison achetables (bicoque → maison → villa), qui changent la façade et agrandissent le sous-sol.
+- **Rez-de-chaussée** : salon décoré (fixe), porte vers l'escalier du sous-sol.
+- **Le sous-sol = le business** : c'est là qu'on construit librement (comptoir, établi, vitrines, coffre, compartiments secrets…). Les clients sonnent, entrent, descendent l'escalier et font la queue au comptoir.
+- **Pourquoi c'est bien** : ambiance « trap » immédiate ; les descentes de police prennent tout leur sens (la police entre par la porte, tu as 20 s pour cacher la marchandise au sous-sol) ; plus tard, **tunnel de fuite** et **porte blindée** en améliorations.
+- **Technique** : le code de construction ne change pas. Le terrain de construction devient le sol du sous-sol (même système de coordonnées locales).
+
+## 21. Le recrutement (crew PNJ gagné par missions)
+
+On ne recrute pas en un clic : chaque recrue doit être **convaincue par une chaîne de missions**. Ça crée du contenu, des histoires et de l'attachement.
+
+### Les rôles
+| Rôle | Ce qu'il fait pour toi | Missions pour le convaincre |
+|---|---|---|
+| **Seller** | Vend au comptoir quand tu n'es pas là | Faire 10 ventes en une nuit sans laisser partir un client |
+| **Runner** | Livre les commandes à domicile dans la ville | Livrer un colis à l'autre bout de la ville en temps limité sans se faire contrôler |
+| **Gunsmith** | Fabrique plus vite, débloque des recettes | Lui apporter une pièce rare des conteneurs des Docks, puis lui fabriquer une arme Rare+ |
+| **Lookout** | Prévient des descentes plus tôt, fait baisser la chaleur | Repérer 3 flics en civil parmi les passants d'un quartier avant la fin du temps |
+| **Muscle** | Protège la maison des braquages, aide en guerre de gangs | Gagner une manche en War Zone ou repousser un braquage de ta maison |
+| **Driver** | Missions de contrebande en camionnette | Réussir une course depuis la jetée en évitant 2 barrages |
+
+### Le parcours d'une recrue
+1. **Rencontre** : des recrues potentielles traînent dans la ville (terrain de basket, arrêt de bus, bar), avec un marqueur discret. Elles changent chaque jour de jeu. Chacune a un nom, une personnalité, des stats (vitesse, charisme, discrétion, loyauté de base) et un niveau de **Street Rep** requis.
+2. **Premier contact** : discussion avec des choix de réponses. La personnalité compte : un Muscle respecte la force, un Seller le style.
+3. **Chaîne de 2 à 3 missions** propres à son rôle (tableau ci-dessus). Un échec n'est pas définitif, mais la recrue devient plus méfiante (une mission de plus).
+4. **Signature** : prime d'embauche + **salaire** payé à chaque jour de jeu, en argent du jeu uniquement.
+5. **Vie dans la crew** :
+   - la recrue habite ta maison : le nombre de lits dépend du niveau de la maison, donc 1 recrue au départ, jusqu'à 5 ;
+   - elle monte de niveau, et tu l'équipes avec **tes propres armes** : ça relie le recrutement à l'établi ;
+   - sa **loyauté** monte (payée à l'heure, bien équipée, missions réussies) ou baisse (salaire en retard, recrue arrêtée pas libérée). Une loyauté basse peut la faire **balancer** (+ chaleur) ou **partir chez un rival** ;
+   - elle peut être **arrêtée** pendant une descente : tu paies la caution ou tu la perds.
+6. **Plus tard** : les autres dealers peuvent débaucher tes recrues en offrant plus.
+
+### Technique
+- Un **MissionService** générique (étapes : aller à, livrer, vendre N, fabriquer une rareté, survivre, trouver un PNJ, gagner une manche). Il servira aussi pour la contrebande, les convois et les événements. La logique d'avancement des missions est pure et testée.
+- Recrues sauvegardées dans le profil (nom, rôle, niveau, loyauté, équipement).
 
 ## 18. Hors périmètre (pour l'instant)
 

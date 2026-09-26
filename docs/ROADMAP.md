@@ -33,6 +33,17 @@ Légende coût : 🟢 petit · 🟡 moyen · 🔴 gros (mérite Opus)
 
 👉 **Fin de phase 1 : premier test avec des potes.**
 
+## Phase M — La map et les trap houses (à faire maintenant : tout le reste s'appuie dessus)
+- M.1 🔴 Générateur de ville (3 × 3 quartiers, routes, trottoirs, immeubles modulaires en meshes), construit une fois dans Studio, StreamingEnabled.
+- M.2 🔴 Trap house : maison extérieure en meshes, rez-de-chaussée, escalier, **sous-sol constructible**. Migration des terrains actuels vers les sous-sols. Chemin des clients porte → escalier → comptoir.
+- M.3 🟡 Points d'intérêt : spawn Downtown, commissariat, entrepôt fournisseur, ruelle du marché noir, station-service.
+- M.4 🟡 War Zone : clôtures, couverts, 5 points de contrôle, spawns Rouge / Bleu.
+
+## Phase R — Recrutement (après la phase 2)
+- R.1 🟡 MissionService générique + logique pure testée.
+- R.2 🔴 Recrues : apparition en ville, dialogue, chaînes de missions par rôle.
+- R.3 🟡 Crew : salaire, loyauté, niveaux, équipement avec tes armes, Seller qui vend à ta place.
+
 ## Phase 2 — La vibe criminelle
 - 2.1 🟡 Cycle jour/nuit (`Logic/DayNight`) + éclairage, pluie, néons.
 - 2.2 🔴 Chaleur et descentes (`Logic/Heat` déjà prêt) : `RaidService`, compte à rebours, fouille, objets secrets.
