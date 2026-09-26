@@ -1,0 +1,70 @@
+local Ledger = require("../../src/shared/Logic/Ledger")
+
+return function(t)
+	t.test("starts with the given balance", function()
+		t.eq(Ledger.new(500):GetBalance(), 500)
+		t.eq(Ledger.new():GetBalance(), 0)
+	end)
+
+	t.test("deposit and withdraw", function()
+		local l = Ledger.new(100)
+		t.truthy(l:Deposit(50, "sale"))
+		t.eq(l:GetBalance(), 150)
+		t.truthy(l:Withdraw(120, "buy"))
+		t.eq(l:GetBalance(), 30)
+	end)
+
+	t.test("refuses to go negative", function()
+		local l = Ledger.new(10)
+		local ok, err = l:Withdraw(11, "buy")
+		t.falsy(ok)
+		t.eq(err, "InsufficientFunds")
+		t.eq(l:GetBalance(), 10)
+	end)
+
+	t.test("rejects exploit amounts", function()
+		local l = Ledger.new(100)
+		for _, bad in { -5, 0, 0.5, 0 / 0, math.huge, "10" :: any, nil :: any } do
+			local ok, err = l:Deposit(bad, "x")
+			t.falsy(ok, "deposit " .. tostring(bad))
+			t.eq(err, "InvalidAmount")
+			t.falsy((l:Withdraw(bad, "x")), "withdraw " .. tostring(bad))
+		end
+		t.eq(l:GetBalance(), 100)
+	end)
+
+	t.test("deposit is capped at max balance", function()
+		local l = Ledger.new(90, 100)
+		l:Deposit(50, "sale")
+		t.eq(l:GetBalance(), 100)
+	end)
+
+	t.test("TakeUpTo never goes below zero", function()
+		local l = Ledger.new(30)
+		t.eq(l:TakeUpTo(50, "fine"), 30)
+		t.eq(l:GetBalance(), 0)
+	end)
+
+	t.test("transfer is atomic", function()
+		local a, b = Ledger.new(100), Ledger.new(0)
+		t.truthy(Ledger.Transfer(a, b, 60, "sale"))
+		t.eq(a:GetBalance(), 40)
+		t.eq(b:GetBalance(), 60)
+		local ok, err = Ledger.Transfer(a, b, 60, "sale")
+		t.falsy(ok)
+		t.eq(err, "InsufficientFunds")
+		t.eq(a:GetBalance(), 40)
+		t.eq(b:GetBalance(), 60)
+	end)
+
+	t.test("history keeps the last 50 entries", function()
+		local l = Ledger.new(0)
+		for i = 1, 60 do
+			l:Deposit(i, "sale")
+		end
+		local h = l:GetHistory()
+		t.eq(#h, 50)
+		t.eq(h[1].amount, 11)
+		t.eq(h[50].amount, 60)
+	end)
+end

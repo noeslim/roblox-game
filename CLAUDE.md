@@ -1,0 +1,79 @@
+# CLAUDE.md — Black Market (jeu Roblox)
+
+Lis ce fichier en entier avant de coder. Le design est dans `docs/GAME_DESIGN.md`, le plan dans `docs/ROADMAP.md`.
+Les auteurs parlent français : réponds en français, mais le code, les noms et les commentaires sont en anglais.
+
+## Le jeu en bref
+Jeu de dealer d'armes (univers fictif, armes stylisées, pas de sang) avec ambiance ville criminelle nocturne façon Criminality. Construction libre de sa planque, fabrication d'armes à sa marque, vente à des PNJ et aux joueurs de deux camps en guerre, descentes d'inspecteurs, marché noir de nuit.
+
+## Stack
+- **Rojo** (`default.project.json`) : le code vit dans `src/`, synchronisé vers Studio sur le PC des auteurs.
+- **Luau** avec `--!strict` en tête de chaque fichier.
+- **Lune** pour exécuter les tests dans le cloud (pas de Roblox Studio ici).
+- Sauvegarde : ProfileStore (à ajouter en phase 1.1).
+
+## Arborescence
+```
+src/
+  shared/            -> ReplicatedStorage.Shared
+    Config/          économie, rareté, pièces, réglages (AUCUN chiffre en dur ailleurs)
+    Logic/           modules PURS : pas de game, workspace, Instance, task, tick(), os.clock()
+  server/            -> ServerScriptService.Server
+    Services/        services serveur (DataService, BuildService, SaleService...)
+  client/            -> StarterPlayer.StarterPlayerScripts.Client
+    Controllers/     UI, caméra, construction, effets
+tests/
+  run.luau           lanceur : `lune run tests/run`
+  specs/*.spec.luau  un fichier de test par module de Logic
+docs/
+```
+
+## Règles d'architecture (non négociables)
+1. **Le serveur fait autorité** sur tout ce qui a de la valeur (argent, pièces, armes, placement, ventes, chaleur). Le client envoie des *intentions* (`RequestPlace`, `RequestSell`...), le serveur valide tout (type, bornes, distance, cooldown, argent) et répond.
+2. **Logique pure dans `src/shared/Logic`** : fonctions déterministes, testables avec Lune. Le temps et l'aléatoire sont **injectés** (paramètre `now: number`, objet `rng` avec `:NextNumber()`), jamais lus directement.
+3. Les modules de `Logic` ne `require` rien de Roblox. S'ils ont besoin de config, ils la reçoivent en paramètre ou requièrent `Config` par chemin relatif (`require("../Config/Economy")`).
+4. **Aucune valeur d'équilibrage en dur** : tout dans `src/shared/Config`.
+5. Animations et effets **côté client uniquement**, déclenchés par un Remote après validation serveur.
+6. Remotes : un seul dossier `ReplicatedStorage.Remotes`, noms en PascalCase, rate-limit côté serveur sur chaque Remote.
+7. Budget mobile : max 400 objets par planque (800 avec extension), particules légères, pas de boucle `while true` sans `task.wait`.
+
+## Conformité Roblox
+- Pas d'objets aléatoires payants (ni Robux, ni monnaie achetée avec des Robux) sans afficher les probabilités et vérifier `ArePaidRandomItemsRestricted`. Au lancement : les caisses ne s'achètent qu'avec l'argent gagné en jeu, qui ne s'achète pas en Robux.
+- Pas de pari simulé. Pas d'échange argent du jeu ↔ Robux entre joueurs.
+- Texte saisi par les joueurs (nom de marque, enseigne) → toujours filtré avec `TextService:FilterStringAsync`.
+
+## Commandes
+```bash
+lune run tests/run            # tous les tests
+lune run tests/run Ledger     # seulement les specs dont le nom contient "Ledger"
+lune run tests/syntax         # compile tous les fichiers de src/ (erreurs de syntaxe)
+rojo build -o build.rbxl      # vérifie que le projet Rojo se construit
+```
+Avant de terminer une session : `tests/run` ET `tests/syntax` doivent passer.
+Si Lune n'est pas installé : `cargo install lune --locked` (ou via Rokit/Aftman sur le PC).
+
+## Écrire un test
+```lua
+local Ledger = require("../../src/shared/Logic/Ledger")
+return function(t)
+	t.test("deposit adds money", function()
+		local l = Ledger.new(100)
+		l:Deposit(50, "sale")
+		t.eq(l:GetBalance(), 150)
+	end)
+end
+```
+Assertions disponibles : `t.eq`, `t.near`, `t.truthy`, `t.falsy`, `t.throws`.
+
+## Méthode de travail (pour économiser les crédits)
+- Une session = une étape de `docs/ROADMAP.md`. Ne pas déborder.
+- D'abord la logique pure + tests, ensuite le service serveur, ensuite le client.
+- Lancer les tests avant de dire "fini". Ne jamais laisser un test rouge.
+- Tu ne vois pas le rendu : pour le visuel, expose des paramètres (durée, taille, couleur) plutôt que d'itérer sur le "beau". Les auteurs règlent dans Studio.
+- Mettre à jour la section "État" ci-dessous à la fin de chaque session.
+
+## État
+- Phase 0 terminée : Config (Economy, Parts), Logic (Ledger, WeaponCrafting, Heat, Customer, ComboTracker, Grid, DayNight), 46 tests Lune verts.
+- Bootstrap : `src/server/init.server.luau` démarre chaque module de `Services/` (méthode `:Start()`), idem côté client avec `Controllers/`.
+- `WorldService` fait tourner le cycle jour/nuit (Lighting.ClockTime + attributs `Phase` / `PhaseSecondsLeft` sur ReplicatedStorage). `PhaseHudController` affiche JOUR/NUIT.
+- Prochaine étape : ROADMAP 1.1 (profils et sauvegarde).
