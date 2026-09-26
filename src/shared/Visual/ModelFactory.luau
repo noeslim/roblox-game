@@ -62,7 +62,7 @@ local function loadLibrary(): { [string]: { MeshTemplate } }?
 	end
 	local scale = 1 / anchor.Size.X -- the origin cube is 1x1x1 stud in the file
 	local found: { [string]: { MeshTemplate } } = {}
-	local count = 0
+	local count, moved, fixed = 0, 0, 0
 	for _, d in root:GetDescendants() do
 		if d:IsA("MeshPart") and d ~= anchor then
 			local assetId, mat = string.match(d.Name, "^(.-)__(.+)$")
@@ -70,21 +70,43 @@ local function loadLibrary(): { [string]: { MeshTemplate } }?
 			if info and mat and MeshLibrary.Materials[mat] then
 				local rel = anchor.CFrame:ToObjectSpace(d.CFrame)
 				local offset = Vector3.new(info.offset.x, info.offset.y, info.offset.z)
+				local cf = CFrame.new(rel.Position * scale - offset) * rel.Rotation
+				local size = d.Size * scale
+				-- The generator knows where each mesh belongs (MeshLibrary.Parts): trust it over the
+				-- importer, which may recenter, rotate or rescale pieces.
+				local box = MeshLibrary.Parts[d.Name]
+				if box then
+					local center = Vector3.new(box.c[1], box.c[2], box.c[3])
+					local expected = Vector3.new(box.s[1], box.s[2], box.s[3])
+					local r = rel.Rotation
+					local worldSize = Vector3.new(
+						math.abs(r.RightVector.X) * size.X + math.abs(r.UpVector.X) * size.Y + math.abs(r.LookVector.X) * size.Z,
+						math.abs(r.RightVector.Y) * size.X + math.abs(r.UpVector.Y) * size.Y + math.abs(r.LookVector.Y) * size.Z,
+						math.abs(r.RightVector.Z) * size.X + math.abs(r.UpVector.Z) * size.Y + math.abs(r.LookVector.Z) * size.Z
+					)
+					local tolerance = 0.05 + expected.Magnitude * 0.02
+					if (cf.Position - center).Magnitude > 0.1 then
+						moved += 1
+					end
+					if (worldSize - expected).Magnitude <= tolerance then
+						cf = CFrame.new(center) * r
+					else
+						-- rotation or scale of this piece is off: axis aligned, generator size
+						fixed += 1
+						cf = CFrame.new(center)
+						size = expected
+					end
+				end
 				local list = found[assetId :: string] or {}
 				found[assetId :: string] = list
-				table.insert(list, {
-					part = d,
-					cf = CFrame.new(rel.Position * scale - offset) * rel.Rotation,
-					size = d.Size * scale,
-					mat = mat,
-				})
+				table.insert(list, { part = d, cf = cf, size = size, mat = mat })
 				count += 1
 			end
 		end
 	end
-	-- scale and rotation of the import: helps diagnosing a misaligned library (should be 1 and 0,0,0)
+	-- scale and rotation of the import (expected: 1 and 0,0,0), pieces the importer had misplaced
 	local o = anchor.Orientation
-	print(("[ModelFactory] mesh library loaded: %d meshes (origin size %.3f, rotation %d,%d,%d)"):format(count, anchor.Size.X, o.X, o.Y, o.Z))
+	print(("[ModelFactory] mesh library loaded: %d meshes (origin size %.3f, rotation %d,%d,%d; %d repositioned, %d reshaped)"):format(count, anchor.Size.X, o.X, o.Y, o.Z, moved, fixed))
 	library = found
 	return found
 end
