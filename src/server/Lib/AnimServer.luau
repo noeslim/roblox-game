@@ -5,13 +5,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Animations = require(Shared.Config.Animations)
+local Cinematics = require(Shared.Config.Cinematics)
 local Parts = require(Shared.Config.Parts)
 local ModelFactory = require(Shared.Visual.ModelFactory)
 local ServerNet = require(script.Parent.ServerNet)
 
 local AnimServer = {}
 
-local WEAPON_SCALE = 0.55 -- the placeholder weapon is ~4 studs long
+-- the placeholder weapon is ~4 studs long; scale and grip shared with the first-person sale
+local WEAPON_SCALE = Cinematics.Deal.WeaponScale
+local GRIP = Cinematics.Deal.CustomerGrip
 
 local function getAnimator(humanoid: Humanoid): Animator
 	local existing = humanoid:FindFirstChildOfClass("Animator")
@@ -160,7 +163,7 @@ function AnimServer.AttachWeapon(model: Model, partIds: { [string]: string }, ra
 		end
 	end
 	-- barrel (+X of the weapon) points forward (-Z of the hand)
-	weapon:PivotTo(hand.CFrame * CFrame.new(0, -0.25, -0.4) * CFrame.Angles(0, math.rad(90), 0))
+	weapon:PivotTo(hand.CFrame * CFrame.new(0, GRIP.y, GRIP.z) * CFrame.Angles(0, math.rad(GRIP.yaw), 0))
 	local grip = Instance.new("WeldConstraint")
 	grip.Part0 = hand
 	grip.Part1 = root

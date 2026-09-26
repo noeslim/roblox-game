@@ -56,4 +56,39 @@ return {
 		},
 		Volume = 0.8,
 	},
+
+	-- First-person sale (DealCinematicController, Logic/DealScene, Visual/DealPoses). The server times
+	-- the customer's gestures on the same numbers (SaleService), so both sides stay in sync.
+	Deal = {
+		Enabled = true,
+		IntroSeconds = 0.5, -- the view moves to your eyes, facing the customer
+		PlaceSeconds = 0.8, -- you lay the weapon on the counter
+		InspectSeconds = 2.2, -- the customer takes it and looks at it
+		PaySeconds = 0.8, -- the cash slides across the counter
+		TakeSeconds = 0.6, -- your left hand takes it
+		ShakeSeconds = 1.4, -- handshake
+		CountSeconds = 2.0, -- you count the bills
+		OutroSeconds = 0.5,
+		SkipAfter = 0.4,
+		HandOffSeconds = 0.6, -- after the inspection starts: the weapon is in the customer's hand
+		WeaponScale = 0.55, -- same as the weapon customers carry (AnimServer)
+		CustomerGrip = { y = -0.25, z = -0.4, yaw = 90 }, -- same as AnimServer.AttachWeapon
+
+		Fov = 62,
+		CounterGap = 0.02, -- things rest this much above the counter top
+		-- positions on the counter, relative to its middle (+Z = your side, -Z = the customer's side)
+		PlaceSpot = { x = 0.35, z = 0.15 }, -- where you lay the weapon
+		CashFrom = { x = -0.15, z = -0.75 }, -- the customer puts the cash here...
+		CashTo = { x = -0.4, z = 0.2 }, -- ...and slides it to you
+		CountHold = { x = -0.25, y = -0.6, z = -1.15 }, -- the cash in your left hand, camera space
+		Bills = 10, -- bills flicked while counting
+		HandFollow = 16,
+
+		Sounds = {
+			Place = "", -- weapon on the counter (Toolbox: "gun put down")
+			Slide = "", -- cash sliding ("paper slide")
+			Flick = "", -- one bill counted ("money count", "bill flick")
+		},
+		Volume = 0.8,
+	},
 }

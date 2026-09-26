@@ -368,6 +368,20 @@ function CustomerService.IsReady(npc: Npc): boolean
 	return npc.state == "Queued" and npc.frontSince ~= nil and stash ~= nil and stash.queue:Front() == npc.id
 end
 
+-- The middle of the top of the player's counter (the first-person sale lays things on it).
+function CustomerService.CounterTop(owner: Player): Vector3?
+	local stash = stashes[owner]
+	local counter = stash and stash.counter
+	if counter == nil or counter.Parent == nil then
+		return nil
+	end
+	local def = Buildables.ById[counter:GetAttribute("BuildableId") :: string]
+	if def == nil then
+		return nil
+	end
+	return (counter:GetPivot() * CFrame.new(0, def.size.y / 2, 0)).Position
+end
+
 function CustomerService.WaitedSeconds(npc: Npc): number
 	return if npc.frontSince then os.clock() - npc.frontSince else 0
 end

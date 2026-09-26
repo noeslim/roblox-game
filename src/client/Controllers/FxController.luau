@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Cinematics = require(Shared.Config.Cinematics)
 local Economy = require(Shared.Config.Economy)
 local Parts = require(Shared.Config.Parts)
 local Visual = require(Shared.Config.Visual)
@@ -15,6 +16,7 @@ local ModelFactory = require(Shared.Visual.ModelFactory)
 local UI = require(script.Parent.Parent.UI)
 local Effects = require(script.Parent.Parent.Effects)
 local Notify = require(script.Parent.Parent.Notify)
+local DealCinematicController = require(script.Parent.DealCinematicController)
 
 local FxController = {}
 
@@ -114,6 +116,11 @@ local function playSale(info: any)
 		return
 	end
 	local pos = info.position :: Vector3
+	if info.ownerUserId == localPlayer.UserId and Cinematics.Deal.Enabled then
+		-- the seller lives the deal in first person; the total shows at the end of the scene
+		DealCinematicController.Play(info)
+		return
+	end
 	if Visual.Realistic then
 		Effects.Sound(Effects.Sounds.Cash, pos)
 		if info.ownerUserId == localPlayer.UserId then

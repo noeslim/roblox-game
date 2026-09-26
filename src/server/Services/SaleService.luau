@@ -11,11 +11,13 @@ local CustomerService = require(script.Parent.CustomerService)
 local GoalsService = require(script.Parent.GoalsService)
 local ServerNet = require(script.Parent.Parent.Lib.ServerNet)
 local AnimServer = require(script.Parent.Parent.Lib.AnimServer)
-local Animations = require(Shared.Config.Animations)
+local Cinematics = require(Shared.Config.Cinematics)
+local DealScene = require(Shared.Logic.DealScene)
 
 local SaleService = {}
 
 local CFG = Economy.Customers
+local DEAL = Cinematics.Deal
 
 local function checkCustomer(player: Player, customerId: any): (CustomerService.Npc?, string?)
 	local npc = CustomerService.GetCustomer(customerId)
@@ -68,28 +70,50 @@ local function completeSale(player: Player, npc: CustomerService.Npc, weaponId: 
 		GoalsService.Record(player, "saleNight", 1)
 	end
 
-	-- deal scene: handshake, the dealer counts the cash, the customer inspects the weapon, then leaves
+	-- deal scene, on the timeline of the owner's first-person view (Logic/DealScene): the dealer lays
+	-- the weapon down, the customer takes it and inspects it, pays, handshake, the dealer counts
 	local dealer = player.Character
 	local dealerRoot = dealer and dealer:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if dealerRoot then
 		AnimServer.Face(npc.root, dealerRoot.Position)
 	end
-	AnimServer.Play(npc.model, "Handshake")
-	AnimServer.Play(dealer, "Handshake")
 	local parts = table.clone(saved.parts)
-	task.delay(Animations.Deal.HandshakeSeconds, function()
-		AnimServer.Play(dealer, "CountMoney")
-		if npc.model.Parent then
-			AnimServer.AttachWeapon(npc.model, parts, weapon.rarity)
-			AnimServer.Play(npc.model, "Inspect")
-		end
+	local plan = DealScene.Plan(DEAL)
+	local model = npc.model
+	local function at(seconds: number, action: () -> ())
+		task.delay(seconds, function()
+			if model.Parent then
+				action()
+			end
+		end)
+	end
+	AnimServer.Play(dealer, "HandOver")
+	at(plan.inspect, function()
+		AnimServer.Play(model, "Inspect")
 	end)
-	CustomerService.Dismiss(npc, "Thanks", Animations.Deal.CustomerLeaveDelay)
+	at(plan.inspect + DEAL.HandOffSeconds, function()
+		AnimServer.AttachWeapon(model, parts, weapon.rarity)
+	end)
+	at(plan.pay, function()
+		AnimServer.Play(model, "HandOver")
+	end)
+	at(plan.shake, function()
+		AnimServer.Play(model, "Handshake")
+		AnimServer.Play(dealer, "Handshake")
+	end)
+	at(plan.count, function()
+		AnimServer.Play(dealer, "CountMoney")
+	end)
+	CustomerService.Dismiss(npc, "Thanks", plan.total)
+	local counterTop = CustomerService.CounterTop(player)
 	local info = {
 		ownerUserId = player.UserId,
 		position = npc.root.Position,
 		weaponName = saved.name,
 		rarity = weapon.rarity,
+		parts = parts,
+		customer = model,
+		counterTop = counterTop,
 		price = price,
 		tip = tip,
 		multiplier = multiplier,
