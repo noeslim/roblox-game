@@ -281,7 +281,8 @@ end
 local function applyMaterialVariants(roots: { Instance }, rng: Random): number
 	local byBase: { [Enum.Material]: { string } } = {}
 	for _, v in MaterialService:GetDescendants() do
-		if v:IsA("MaterialVariant") then
+		-- BM_* are our own textures, applied on purpose through PartSpec.texture
+		if v:IsA("MaterialVariant") and string.sub(v.Name, 1, 3) ~= "BM_" then
 			local list = byBase[v.BaseMaterial] or {}
 			byBase[v.BaseMaterial] = list
 			table.insert(list, v.Name)
@@ -294,7 +295,8 @@ local function applyMaterialVariants(roots: { Instance }, rng: Random): number
 	local count = 0
 	for _, root in roots do
 		for _, d in root:GetDescendants() do
-			if d:IsA("BasePart") and d.MaterialVariant == "" then
+			-- plain parts only: library meshes have no texture coordinates, a tiled texture smears on them
+			if d:IsA("Part") and d.MaterialVariant == "" then
 				local list = byBase[d.Material]
 				if list then
 					local key = d.Material.Name .. d.Color:ToHex()
@@ -355,7 +357,9 @@ local function buildBuilding(b: CityLayout.Building, parent: Instance, origin: C
 	end
 	model.PrimaryPart = body
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
-	if a.h >= 40 then
+	-- StreamingMesh shows an automatic low-poly stand-in for far buildings: it mangles the facades
+	-- (tilted windows, floating pieces), so it is off unless Config/City.Streaming asks for it
+	if City.Streaming.BuildingLod and a.h >= 40 then
 		pcall(function()
 			(model :: any).LevelOfDetail = Enum.ModelLevelOfDetail.StreamingMesh
 		end)
@@ -775,8 +779,8 @@ function MapBuilder.Build(): (Instance, Instance)
 	-- streaming: phones only load what is around the player (can only be changed in edit mode)
 	pcall(function()
 		workspace.StreamingEnabled = true
-		workspace.StreamingTargetRadius = 640
-		workspace.StreamingMinRadius = 128
+		workspace.StreamingTargetRadius = City.Streaming.TargetRadius
+		workspace.StreamingMinRadius = City.Streaming.MinRadius
 	end)
 
 	local count = 0

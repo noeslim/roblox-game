@@ -144,6 +144,13 @@ City.BillboardAds = {
 	{ text = "SEE SOMETHING? SAY NOTHING", color = "#FF3B3B", background = "#111114" },
 }
 
+-- Instance streaming (phones only load what is around the player). Applied by MapBuilder.
+City.Streaming = {
+	TargetRadius = 640,
+	MinRadius = 128,
+	BuildingLod = false, -- Model.LevelOfDetail = StreamingMesh on tall buildings (ugly stand-ins, off)
+}
+
 City.Boundary = {
 	OuterGround = 220, -- ground around the city
 	SeaWidth = 260, -- sea on the east side (terrain water)

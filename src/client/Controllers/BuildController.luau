@@ -50,6 +50,16 @@ local rotation = 0
 local ghost: Model? = nil
 local highlight: Highlight? = nil
 local hoverHighlight: Highlight? = nil
+
+-- A Highlight without Adornee highlights its parent (here the whole workspace, the city turned red):
+-- it is only enabled while it has a target.
+local function setHover(model: Model?)
+	local h = hoverHighlight
+	if h then
+		h.Adornee = model
+		h.Enabled = model ~= nil
+	end
+end
 local candidate: { x: number, z: number, valid: boolean }? = nil
 local aimScreen: Vector2? = nil -- last touch position on mobile
 local plot: Instance? = nil
@@ -321,9 +331,7 @@ local function setMode(newMode: Mode)
 		selectedId = nil
 		clearGhost()
 	end
-	if hoverHighlight then
-		hoverHighlight.Adornee = nil
-	end
+	setHover(nil)
 	setHint()
 	refreshItems()
 end
@@ -458,9 +466,7 @@ local function exit()
 	selectedId = nil
 	movingObjectId = nil
 	clearGhost()
-	if hoverHighlight then
-		hoverHighlight.Adornee = nil
-	end
+	setHover(nil)
 	workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
 	setHouseHidden(false)
 	local controls = getControls()
@@ -593,6 +599,7 @@ local function buildUi()
 		OutlineColor = UI.Theme.Danger,
 		FillTransparency = 0.6,
 		DepthMode = Enum.HighlightDepthMode.Occluded,
+		Enabled = false, -- see setHover
 		Parent = workspace, -- client-only instance
 	})
 end
@@ -720,7 +727,7 @@ function BuildController:Start()
 		updateGhost()
 		if hoverHighlight and (mode == "Sell" or (mode == "Move" and movingObjectId == nil)) and not isTouch() then
 			local model = objectAt(UserInputService:GetMouseLocation())
-			hoverHighlight.Adornee = model
+			setHover(model)
 			hoverHighlight.FillColor = if mode == "Sell" then UI.Theme.Danger else UI.Theme.Info
 			hoverHighlight.OutlineColor = hoverHighlight.FillColor
 		end
