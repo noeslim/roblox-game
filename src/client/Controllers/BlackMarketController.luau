@@ -1,0 +1,102 @@
+--!strict
+-- The night black market (Chinatown alley): tonight's contraband stock, bought on the spot.
+-- Opened by the "ShopPrompt" with Shop = "BlackMarket" (PoiService). The server checks everything.
+local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Parts = require(Shared.Config.Parts)
+local Messages = require(Shared.Config.Messages)
+local Net = require(Shared.Net)
+local UI = require(script.Parent.Parent.UI)
+local Notify = require(script.Parent.Parent.Notify)
+local Effects = require(script.Parent.Parent.Effects)
+
+local BlackMarketController = {}
+
+local AUTO_CLOSE_DISTANCE = 24
+
+local player = Players.LocalPlayer
+local gui: ScreenGui
+local list: ScrollingFrame
+local spot: BasePart? = nil
+
+local function close()
+	gui.Enabled = false
+	spot = nil
+end
+
+local function render(stock: { any })
+	UI.ClearChildren(list)
+	for i, offer in stock do
+		local part = Parts[offer.id]
+		if part == nil then
+			continue
+		end
+		local row = UI.Panel({ LayoutOrder = i, Size = UDim2.new(1, -8, 0, 46), BackgroundColor3 = UI.Theme.PanelLight, Parent = list })
+		UI.Label({ Position = UDim2.fromOffset(10, 0), Size = UDim2.new(0.5, -10, 1, 0), Text = part.name, TextColor3 = UI.RarityColor(part.rarity), TextXAlignment = Enum.TextXAlignment.Left, Parent = row })
+		UI.Label({ Position = UDim2.fromScale(0.5, 0), Size = UDim2.new(0.22, 0, 1, 0), Text = part.rarity .. " " .. part.slot, TextColor3 = UI.Theme.SubText, TextSize = 12, Parent = row })
+		UI.Button({
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -6, 0.5, 0),
+			Size = UDim2.fromOffset(96, 34),
+			Text = UI.Money(offer.price),
+			TextSize = 14,
+			BackgroundColor3 = UI.Theme.Danger,
+			Parent = row,
+		}, function()
+			local ok, result = Net.Invoke("RequestBuyPart", offer.id, 1, "blackmarket")
+			if ok then
+				Effects.Sound(Effects.Sounds.Cash, nil, 0.9)
+			else
+				Notify.Show(Messages.ForError(result), "error")
+			end
+		end)
+	end
+end
+
+local function open(part: BasePart?)
+	local ok, result = Net.Invoke("RequestBlackMarket")
+	if not ok then
+		Notify.Show(Messages.ForError(result), "error")
+		return
+	end
+	spot = part
+	render(result)
+	gui.Enabled = true
+end
+
+function BlackMarketController:Start()
+	gui = UI.Screen("BlackMarket", 20)
+	gui.Enabled = false
+	local panel = UI.Panel({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(460, 330), Parent = gui })
+	UI.Stroke(panel, UI.Theme.Danger, 2)
+	UI.Padding(panel, 12)
+	UI.Label({ Size = UDim2.new(1, -50, 0, 28), Text = Messages.Poi.BlackMarketTitle, Font = UI.Theme.FontBlack, TextSize = 24, TextColor3 = UI.Theme.Danger, TextXAlignment = Enum.TextXAlignment.Left, Parent = panel })
+	UI.Label({ Position = UDim2.fromOffset(0, 30), Size = UDim2.new(1, 0, 0, 16), Text = Messages.Poi.BlackMarketNote, TextSize = 12, TextColor3 = UI.Theme.SubText, TextXAlignment = Enum.TextXAlignment.Left, Parent = panel })
+	UI.Button({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.fromOffset(36, 30), Text = "X", BackgroundColor3 = UI.Theme.Danger, Parent = panel }, close)
+	list = UI.Scrolling({ Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 1, -56), Parent = panel })
+	UI.List(list, 6)
+
+	ProximityPromptService.PromptTriggered:Connect(function(prompt, who)
+		if who == player and prompt.Name == "ShopPrompt" and prompt:GetAttribute("Shop") == "BlackMarket" then
+			local parent = prompt.Parent
+			open(if parent and parent:IsA("BasePart") then parent else nil)
+		end
+	end)
+	-- walking away or the night ending closes it
+	RunService.Heartbeat:Connect(function()
+		if not gui.Enabled then
+			return
+		end
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local s = spot
+		if ReplicatedStorage:GetAttribute("Phase") ~= "Night" or (s and root and root:IsA("BasePart") and (root.Position - s.Position).Magnitude > AUTO_CLOSE_DISTANCE) then
+			close()
+		end
+	end)
+end
+
+return BlackMarketController

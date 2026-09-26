@@ -160,6 +160,21 @@ City.Interiors = {
 	CorridorDepth = 8,
 }
 
+-- Points of interest: markers with distance on screen (PoiController) and places where things
+-- happen (PoiService). Labels are shown to players (English).
+City.Poi = {
+	UseRadius = 18, -- studs: how close you must be to buy on site
+	MarkerMaxDistance = 2500,
+	Markers = {
+		Supplier = { label = "SUPPLIER", color = "#39FF88" },
+		BlackMarket = { label = "BLACK MARKET", color = "#FF3B3B", nightOnly = true },
+		GasStation = { label = "GAS & FOOD", color = "#FFB020" },
+		Police = { label = "POLICE", color = "#3FA9F5" },
+		WarZone = { label = "WAR ZONE", color = "#FF4D4D" },
+		Spawn = { label = "DOWNTOWN", color = "#F2ECFF" },
+	} :: { [string]: { label: string, color: string, nightOnly: boolean? } },
+}
+
 -- Instance streaming (phones only load what is around the player). Applied by MapBuilder.
 City.Streaming = {
 	TargetRadius = 640,

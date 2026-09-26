@@ -11,6 +11,7 @@ local SoundService = game:GetService("SoundService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Mood = require(Shared.Config.Mood)
 local Stamina = require(Shared.Logic.Stamina)
+local Net = require(Shared.Net)
 local UI = require(script.Parent.Parent.UI)
 
 local MovementController = {}
@@ -97,6 +98,11 @@ function MovementController:Start()
 		breath = sound
 	end
 	buildBar()
+	-- gas station meal: full stamina
+	Net.GetEvent("StaminaRefill").OnClientEvent:Connect(function()
+		state.value = S.Max
+		state.exhausted = false
+	end)
 
 	local player = Players.LocalPlayer
 	player.CharacterAdded:Connect(watchCharacter)

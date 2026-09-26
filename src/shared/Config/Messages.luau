@@ -39,6 +39,10 @@ Messages.Errors = {
 	NotYourCustomer = "That's not your customer.",
 	NotReady = "That customer isn't ready.",
 	AlreadyClaimed = "Already claimed today. Come back tomorrow.",
+	MarketClosed = "The black market only opens at night.",
+	TooFarFromPoi = "Get closer.",
+	SoldOut = "Not in stock tonight.",
+	TooSoon = "Wait a bit.",
 	TooFar = "Get closer to the customer.",
 	NoCounterOffer = "There's no offer to accept.",
 }
@@ -51,6 +55,18 @@ function Messages.ForError(code: any): string
 	local key = string.match(code, "^([^:]+)") or code
 	return Messages.Errors[key] or code
 end
+
+-- Points of interest
+Messages.Poi = {
+	SupplierPrompt = "Browse parts",
+	BlackMarketPrompt = "Deal",
+	GasPrompt = "Eat ($%d)",
+	Refilled = "Back on your feet.",
+	DeliveryNote = "Phone order: +%d%% delivery. No fee at the SUPPLIER (Docks).",
+	OnSiteNote = "At the supplier: no delivery fee.",
+	BlackMarketTitle = "BLACK MARKET",
+	BlackMarketNote = "Tonight only. New stock every night.",
+}
 
 -- Daily streak and contracts (GoalsService / GoalsController)
 Messages.Goals = {

@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Economy = require(Shared.Config.Economy)
+local City = require(Shared.Config.City)
 local Parts = require(Shared.Config.Parts)
 local Messages = require(Shared.Config.Messages)
 local Inventory = require(Shared.Logic.Inventory)
@@ -218,14 +219,34 @@ local function buy(partId: string, amount: number)
 	end
 end
 
+-- Inside the supplier's warehouse there is no delivery fee (the server decides, this is for display).
+local function atSupplier(): boolean
+	local spot = ReplicatedStorage:GetAttribute("Poi_Supplier") -- published by PoiService
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if typeof(spot) == "Vector3" and root and root:IsA("BasePart") then
+		return (spot - root.Position).Magnitude <= City.Poi.UseRadius
+	end
+	return false
+end
+
 local function renderSupplier()
-	local list = UI.Scrolling({ Size = UDim2.fromScale(1, 1), Parent = content })
+	local onSite = atSupplier()
+	UI.Label({
+		Size = UDim2.new(1, 0, 0, 18),
+		Text = if onSite then Messages.Poi.OnSiteNote else Messages.Poi.DeliveryNote:format(math.floor(Economy.Supplier.DeliveryFee * 100 + 0.5)),
+		TextSize = 13,
+		TextColor3 = if onSite then UI.Theme.Money else UI.Theme.Warning,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = content,
+	})
+	local list = UI.Scrolling({ Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 1, -24), Parent = content })
 	UI.List(list, 6)
 	local d = data()
 	local money = player:GetAttribute("Money")
 	for i, id in Shop.Catalogue(Parts, Economy) do
 		local part = Parts[id]
-		local price = Shop.PartPrice(part, Economy) :: number
+		local price = Shop.PartPrice(part, Economy, onSite) :: number
 		local row = UI.Panel({ LayoutOrder = i, Size = UDim2.new(1, -8, 0, 46), BackgroundColor3 = UI.Theme.PanelLight, Parent = list })
 		UI.Label({ Position = UDim2.fromOffset(10, 0), Size = UDim2.new(0.4, -10, 1, 0), Text = part.name, TextColor3 = UI.RarityColor(part.rarity), TextXAlignment = Enum.TextXAlignment.Left, Parent = row })
 		UI.Label({ Position = UDim2.fromScale(0.4, 0), Size = UDim2.new(0.18, 0, 1, 0), Text = part.slot, TextColor3 = UI.Theme.SubText, TextSize = 13, Parent = row })
@@ -345,8 +366,11 @@ local function close()
 	benchPart = nil
 end
 
-function WorkbenchController.Open(bench: BasePart?)
+function WorkbenchController.Open(bench: BasePart?, tab: string?)
 	benchPart = bench
+	if tab then
+		currentTab = tab
+	end
 	gui.Enabled = true
 	render()
 end
@@ -383,9 +407,12 @@ function WorkbenchController:Start()
 	buildUi()
 
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, who)
+		local parent = prompt.Parent
+		local part = if parent and parent:IsA("BasePart") then parent else nil
 		if who == player and prompt.Name == "WorkbenchPrompt" then
-			local parent = prompt.Parent
-			WorkbenchController.Open(if parent and parent:IsA("BasePart") then parent else nil)
+			WorkbenchController.Open(part)
+		elseif who == player and prompt.Name == "ShopPrompt" and prompt:GetAttribute("Shop") == "Supplier" then
+			WorkbenchController.Open(part, "Supplier")
 		end
 	end)
 

@@ -17,6 +17,7 @@ Net.Functions = {
 	"RequestAcceptCounter",
 	"RequestDecline",
 	"RequestClaimDaily",
+	"RequestBlackMarket", -- tonight's stock (only near the black market, at night)
 }
 
 Net.Events = {
@@ -26,6 +27,7 @@ Net.Events = {
 	"SaleFx", -- server -> all: (info table)
 	"LevelUp", -- server -> owner: (newLevel)
 	"PlayPose", -- server -> all: (model, animationName) procedural animation played by every client
+	"StaminaRefill", -- server -> owner: stamina back to full (gas station)
 	"GoalsSync", -- server -> owner: daily streak + contracts (GoalsService.Snapshot)
 	"LookAt", -- client -> server: (pitch, yaw) where the player looks, in degrees (head animation)
 }

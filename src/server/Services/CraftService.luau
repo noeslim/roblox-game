@@ -8,10 +8,12 @@ local Economy = require(Shared.Config.Economy)
 local Parts = require(Shared.Config.Parts)
 local Inventory = require(Shared.Logic.Inventory)
 local Shop = require(Shared.Logic.Shop)
+local BlackMarket = require(Shared.Logic.BlackMarket)
 local WeaponCrafting = require(Shared.Logic.WeaponCrafting)
 local DataService = require(script.Parent.DataService)
 local BuildService = require(script.Parent.BuildService)
 local GoalsService = require(script.Parent.GoalsService)
+local PoiService = require(script.Parent.PoiService)
 local ServerNet = require(script.Parent.Parent.Lib.ServerNet)
 local AnimServer = require(script.Parent.Parent.Lib.AnimServer)
 
@@ -91,7 +93,17 @@ local function craft(player: Player, partIds: any): (boolean, any)
 	}
 end
 
-local function buyPart(player: Player, partId: any, amount: any): (boolean, any)
+local function isNight(): boolean
+	return ReplicatedStorage:GetAttribute("Phase") == "Night"
+end
+
+local function blackMarketStock()
+	return BlackMarket.Stock(BlackMarket.NightIndex(workspace:GetServerTimeNow(), Economy.DayNight), Parts, Economy)
+end
+
+-- source: "supplier" (default: on site, or by phone with the delivery fee) or "blackmarket"
+-- (contraband, at night, at the black market only)
+local function buyPart(player: Player, partId: any, amount: any, source: any): (boolean, any)
 	local data = DataService.GetData(player)
 	local ledger = DataService.GetLedger(player)
 	if data == nil or ledger == nil then
@@ -100,17 +112,34 @@ local function buyPart(player: Player, partId: any, amount: any): (boolean, any)
 	if type(partId) ~= "string" or type(amount) ~= "number" or amount ~= amount then
 		return false, "InvalidInput"
 	end
-	if amount < 1 or amount > Economy.Supplier.MaxBuyPerRequest or math.floor(amount) ~= amount then
+	local black = source == "blackmarket"
+	local maxAmount = if black then Economy.BlackMarket.MaxBuyPerRequest else Economy.Supplier.MaxBuyPerRequest
+	if amount < 1 or amount > maxAmount or math.floor(amount) ~= amount then
 		return false, "InvalidAmount"
 	end
-	local unitPrice = Shop.PartPrice(Parts[partId], Economy)
+	local unitPrice: number?
+	if black then
+		if not isNight() then
+			return false, "MarketClosed"
+		end
+		if not PoiService.IsNear(player, "BlackMarket") then
+			return false, "TooFarFromPoi"
+		end
+		local offer = BlackMarket.Find(blackMarketStock(), partId)
+		if offer == nil then
+			return false, "SoldOut"
+		end
+		unitPrice = offer.price
+	else
+		unitPrice = Shop.PartPrice(Parts[partId], Economy, PoiService.IsNear(player, "Supplier"))
+	end
 	if unitPrice == nil then
 		return false, "NotSold"
 	end
 	if Inventory.Count(data.Parts, partId) + amount > Economy.Profile.MaxPartStack then
 		return false, "StackFull"
 	end
-	local ok, err = ledger:Withdraw(unitPrice * amount, "supplier:" .. partId)
+	local ok, err = ledger:Withdraw(unitPrice * amount, (if black then "blackmarket:" else "supplier:") .. partId)
 	if not ok then
 		return false, err
 	end
@@ -136,6 +165,15 @@ end
 function CraftService:Start()
 	ServerNet.Handle("RequestCraft", craft)
 	ServerNet.Handle("RequestBuyPart", buyPart)
+	ServerNet.Handle("RequestBlackMarket", function(player: Player)
+		if not isNight() then
+			return false, "MarketClosed"
+		end
+		if not PoiService.IsNear(player, "BlackMarket") then
+			return false, "TooFarFromPoi"
+		end
+		return true, blackMarketStock()
+	end)
 	ServerNet.Handle("RequestSetPrice", setPrice)
 	ServerNet.Handle("RequestSnapshot", function(player: Player)
 		return true, DataService.Snapshot(player)

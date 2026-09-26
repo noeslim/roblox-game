@@ -34,6 +34,21 @@ Economy.Supplier = {
 	Rarities = { "Common", "Uncommon" }, -- rarer parts come from the black market (phase 2)
 	PriceMultiplier = 1, -- price = part value x rarity multiplier x this
 	MaxBuyPerRequest = 10,
+	DeliveryFee = 0.35, -- ordering by phone from anywhere: +35%; no fee inside the supplier's warehouse
+}
+
+-- Black market (Chinatown alley, open at night): contraband parts, new stock and prices every night
+Economy.BlackMarket = {
+	StockSize = 4,
+	PriceMin = 1.1, -- x the part's normal value (value x rarity multiplier)
+	PriceMax = 1.7,
+	MaxBuyPerRequest = 2,
+}
+
+-- Gas station: eat something, back to full health and stamina
+Economy.GasStation = {
+	Price = 25,
+	CooldownSeconds = 20,
 }
 
 -- Weapon prices set by the dealer ---------------------------------------------

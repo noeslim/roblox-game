@@ -3,8 +3,9 @@
 
 local Shop = {}
 
--- Price of one part at the legal supplier, or nil if the supplier does not sell it.
-function Shop.PartPrice(part: any, economy: any): number?
+-- Price of one part at the legal supplier, or nil if the supplier does not sell it. Ordered from
+-- elsewhere than the supplier's warehouse (onSite == false), the delivery fee is added.
+function Shop.PartPrice(part: any, economy: any, onSite: boolean?): number?
 	if part == nil or part.contraband then
 		return nil
 	end
@@ -12,6 +13,9 @@ function Shop.PartPrice(part: any, economy: any): number?
 		return nil
 	end
 	local price = part.value * economy.RarityMultiplier[part.rarity] * economy.Supplier.PriceMultiplier
+	if onSite == false then
+		price *= 1 + (economy.Supplier.DeliveryFee or 0)
+	end
 	return math.max(1, math.floor(price + 0.5))
 end
 
