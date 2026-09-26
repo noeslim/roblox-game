@@ -8,7 +8,7 @@ return {
 	Grade = {
 		TweenSeconds = 6,
 		Day = { Saturation = -0.18, Contrast = 0.14, Brightness = -0.02, Tint = "#EEF0F4" },
-		Night = { Saturation = -0.32, Contrast = 0.2, Brightness = -0.04, Tint = "#DCE3F0" },
+		Night = { Saturation = -0.25, Contrast = 0.12, Brightness = 0.03, Tint = "#DCE3F0" },
 	},
 
 	-- Dark screen edges (4 gradient frames, no texture needed)

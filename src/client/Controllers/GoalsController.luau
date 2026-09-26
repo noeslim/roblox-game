@@ -145,8 +145,7 @@ end
 function GoalsController:Start()
 	local gui = UI.Screen("Contracts", 2)
 	panel = UI.Panel({
-		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, 12, 0.42, 0),
+		Position = UDim2.new(0, 12, 0, 70), -- top left, under Roblox's menu buttons (BUILD sits lower)
 		Size = UDim2.fromOffset(240, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 0.25,

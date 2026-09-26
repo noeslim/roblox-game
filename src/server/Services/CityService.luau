@@ -40,9 +40,16 @@ end
 
 local function applyPhase()
 	local night = ReplicatedStorage:GetAttribute("Phase") == "Night"
+	local L = World.StreetLight
 	for _, light in CollectionService:GetTagged(NIGHT_LIGHT_TAG) do
 		if light:IsA("Light") then
 			light.Enabled = night
+			if light:IsA("SpotLight") then
+				-- street lamps follow Config/World even in a city saved with older settings
+				light.Range = L.Range
+				light.Brightness = L.Brightness
+				light.Angle = L.Angle
+			end
 		end
 	end
 	for _, p in CollectionService:GetTagged(NIGHT_GLOW_TAG) do
