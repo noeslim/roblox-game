@@ -41,6 +41,7 @@ Animations.Custom = {
 	CountMoney = "",
 	HandOver = "",
 	Hammer = "",
+	Assemble = "",
 	Inspect = "",
 	ShakeHead = "",
 	Shrug = "",
@@ -103,6 +104,24 @@ Animations.Procedural = {
 			{ t = 0.35, joints = { RightShoulder = a(80), RightElbow = a(6) } },
 			{ t = 0.65, joints = { RightShoulder = a(80), RightElbow = a(6) } },
 			{ t = 1.0, joints = { RightShoulder = a(0), RightElbow = a(0) } },
+		},
+	},
+	-- leaning over the bench, hands working (what others see while you craft)
+	Assemble = {
+		duration = 8.5,
+		fade = 0.4,
+		keys = {
+			{ t = 0.0, joints = { Waist = a(0), Neck = a(0), RightShoulder = a(0), RightElbow = a(0), LeftShoulder = a(0), LeftElbow = a(0) } },
+			{ t = 0.6, joints = { Waist = a(-14), Neck = a(-24), RightShoulder = a(48, 0, -10), RightElbow = a(42), LeftShoulder = a(44, 0, 10), LeftElbow = a(48) } },
+			{ t = 1.4, joints = { Waist = a(-14, 6), Neck = a(-24, 8), RightShoulder = a(58, 0, -18), RightElbow = a(30), LeftShoulder = a(44, 0, 10), LeftElbow = a(48) } },
+			{ t = 2.2, joints = { Waist = a(-14), Neck = a(-26), RightShoulder = a(46, 0, -6), RightElbow = a(50), LeftShoulder = a(46, 0, 12), LeftElbow = a(46) } },
+			{ t = 3.0, joints = { Waist = a(-14, -5), Neck = a(-24, -6), RightShoulder = a(56, 0, -20), RightElbow = a(32), LeftShoulder = a(44, 0, 10), LeftElbow = a(48) } },
+			{ t = 3.8, joints = { Waist = a(-14), Neck = a(-26), RightShoulder = a(48, 0, -8), RightElbow = a(46), LeftShoulder = a(46, 0, 12), LeftElbow = a(46) } },
+			{ t = 4.6, joints = { Waist = a(-15), Neck = a(-28), RightShoulder = a(52, 0, -4), RightElbow = a(58), RightWrist = a(0, 0, 40), LeftShoulder = a(46, 0, 12), LeftElbow = a(46) } },
+			{ t = 5.4, joints = { Waist = a(-15), Neck = a(-28), RightShoulder = a(52, 0, -4), RightElbow = a(58), RightWrist = a(0, 0, -40), LeftShoulder = a(46, 0, 12), LeftElbow = a(46) } },
+			{ t = 6.2, joints = { Waist = a(-6), Neck = a(-10), RightShoulder = a(70, 0, -10), RightElbow = a(60), RightWrist = a(0), LeftShoulder = a(66, 0, 14), LeftElbow = a(56) } },
+			{ t = 7.6, joints = { Waist = a(-4, 8), Neck = a(-8, 10), RightShoulder = a(72, 0, -10), RightElbow = a(58), LeftShoulder = a(64, 0, 14), LeftElbow = a(58) } },
+			{ t = 8.5, joints = { Waist = a(0), Neck = a(0), RightShoulder = a(0), RightElbow = a(0), RightWrist = a(0), LeftShoulder = a(0), LeftElbow = a(0) } },
 		},
 	},
 	Hammer = {

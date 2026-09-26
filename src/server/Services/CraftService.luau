@@ -82,7 +82,7 @@ local function craft(player: Player, partIds: any): (boolean, any)
 		GoalsService.Record(player, "craftRare", 1)
 	end
 
-	AnimServer.Play(player.Character, "Hammer")
+	AnimServer.Play(player.Character, "Assemble") -- the crafter sees the first-person scene
 	ServerNet.FireAllClients("CraftFx", bench:GetPivot().Position, weapon.parts, weapon.rarity, weapon.value, player.UserId)
 	return true, {
 		id = saved.id,

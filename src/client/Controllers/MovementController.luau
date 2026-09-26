@@ -158,9 +158,21 @@ function MovementController:Start()
 		camera.FieldOfView += ((if mode == "sprint" and moving then C.SprintFov else C.Fov) - camera.FieldOfView) * math.min(1, dt * 4)
 	end)
 	-- roll applied after the default camera has been placed this frame
-	RunService:BindToRenderStep("MoodTilt", Enum.RenderPriority.Camera.Value + 1, function()
+	local shoulder = 0 -- 0..1, eased in and out when zooming between first and third person
+	RunService:BindToRenderStep("MoodTilt", Enum.RenderPriority.Camera.Value + 1, function(dt: number)
 		local camera = workspace.CurrentCamera
-		if camera.CameraType == Enum.CameraType.Custom and math.abs(tilt) > 0.01 then
+		if camera.CameraType ~= Enum.CameraType.Custom then
+			return
+		end
+		-- over the right shoulder in third person (camera space, so it stays put when the body turns)
+		local h = humanoid
+		local head = h and h.Parent and (h.Parent :: Instance):FindFirstChild("Head")
+		local third = head ~= nil and head:IsA("BasePart") and (camera.CFrame.Position - head.Position).Magnitude > 3
+		shoulder += ((if third then 1 else 0) - shoulder) * math.min(1, dt * 6)
+		if shoulder > 0.01 then
+			camera.CFrame *= CFrame.new(C.ShoulderOffset * shoulder, C.ShoulderHeight * shoulder, 0)
+		end
+		if math.abs(tilt) > 0.01 then
 			camera.CFrame *= CFrame.Angles(0, 0, math.rad(tilt))
 		end
 	end)

@@ -5,6 +5,10 @@
 export type WeaponPiece = { size: { x: number, y: number, z: number }, pos: { x: number, y: number, z: number }, shape: string? }
 
 return {
+	-- true: grounded feedback (sounds, small notifications, the first-person crafting scene) instead of
+	-- arcade effects (floating texts, sparkles, flying bills, flashes)
+	Realistic = true,
+
 	-- base color of a part per set; parts without a set use their rarity color
 	SetColors = {
 		Street = "#6B5B4B",

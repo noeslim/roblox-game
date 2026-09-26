@@ -65,6 +65,9 @@ return {
 		SprintFov = 78,
 		Fov = 70,
 		LandShake = 0.35, -- studs, after a fall
+		-- third person: camera over the right shoulder (0 = centered). Not applied in first person.
+		ShoulderOffset = 1.7,
+		ShoulderHeight = 0.25,
 	},
 
 	-- Body dynamics seen by everyone (BodyController, computed on each client)

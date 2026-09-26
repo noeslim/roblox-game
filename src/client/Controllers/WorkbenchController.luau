@@ -20,6 +20,7 @@ local UI = require(script.Parent.Parent.UI)
 local State = require(script.Parent.Parent.State)
 local Notify = require(script.Parent.Parent.Notify)
 local Effects = require(script.Parent.Parent.Effects)
+local CraftCinematicController = require(script.Parent.CraftCinematicController)
 
 local WorkbenchController = {}
 
@@ -112,10 +113,23 @@ local function doCraft()
 		return
 	end
 	busy = true
-	local ok, result = Net.Invoke("RequestCraft", currentRecipe())
+	local recipe = currentRecipe()
+	local ok, result = Net.Invoke("RequestCraft", recipe)
 	busy = false
 	if ok then
-		Notify.Show(("Crafted %s (%s) - suggested price %s"):format(result.name, result.rarity, UI.Money(result.suggestedPrice)), "success")
+		local bench = benchPart
+		if bench and bench.Parent then
+			-- first-person assembly scene; the UI comes back when it ends
+			gui.Enabled = false
+			CraftCinematicController.Play(bench, recipe, result, function()
+				if benchPart == bench then
+					gui.Enabled = true
+					render()
+				end
+			end)
+		else
+			Notify.Show(("Crafted %s (%s) - suggested price %s"):format(result.name, result.rarity, UI.Money(result.suggestedPrice)), "success")
+		end
 	else
 		errorText(result)
 	end
@@ -428,7 +442,7 @@ function WorkbenchController:Start()
 	end)
 
 	RunService.RenderStepped:Connect(function(dt: number)
-		if not gui.Enabled then
+		if not gui.Enabled or CraftCinematicController.IsPlaying() then
 			return
 		end
 		local model = previewModel

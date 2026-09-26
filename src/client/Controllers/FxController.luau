@@ -33,6 +33,13 @@ local function playCraft(pos: Vector3, partIds: { [string]: string }, rarity: st
 	local center = pos + Vector3.new(0, CRAFT.HeightAbove, 0)
 	local rarityColor = UI.RarityColor(rarity)
 	local isMine = ownerUserId == localPlayer.UserId
+	if Visual.Realistic then
+		-- the crafter watches the first-person scene; others just hear the work at the bench
+		if not isMine then
+			Effects.Sound(Effects.Sounds.Craft, pos, 0.8)
+		end
+		return
+	end
 	local folder = Instance.new("Folder")
 	folder.Name = "CraftFx"
 	folder.Parent = workspace
@@ -107,6 +114,21 @@ local function playSale(info: any)
 		return
 	end
 	local pos = info.position :: Vector3
+	if Visual.Realistic then
+		Effects.Sound(Effects.Sounds.Cash, pos)
+		if info.ownerUserId == localPlayer.UserId then
+			local extra = {}
+			if type(info.combo) == "number" and info.combo > 1 then
+				table.insert(extra, ("streak x%.1f"):format(info.multiplier))
+			end
+			if type(info.tip) == "number" and info.tip > 0 then
+				table.insert(extra, "tip " .. UI.Money(info.tip))
+			end
+			local suffix = if #extra > 0 then "  (" .. table.concat(extra, ", ") .. ")" else ""
+			Notify.Show("Sold for " .. UI.Money(info.total) .. suffix, "success")
+		end
+		return
+	end
 	Effects.Sparkles(pos + Vector3.new(0, 2, 0), UI.Theme.Money, 30)
 	Effects.Sound(Effects.Sounds.Cash, pos)
 	if info.ownerUserId ~= localPlayer.UserId then
@@ -135,6 +157,9 @@ local function playLevelUp(level: any)
 		return
 	end
 	Notify.Show("LEVEL UP! You are now level " .. level, "success")
+	if Visual.Realistic then
+		return
+	end
 	Effects.Flash(UI.Theme.Accent, 0.6)
 	local character = localPlayer.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
