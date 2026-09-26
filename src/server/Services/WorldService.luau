@@ -12,6 +12,8 @@ local DayNight = require(Shared.Logic.DayNight)
 
 local WorldService = {}
 
+local rng = Random.new()
+
 local function applyLighting(phase: string, instant: boolean)
 	local preset = if phase == "Night" then World.Lighting.Night else World.Lighting.Day
 	local goal = {
@@ -33,6 +35,8 @@ function WorldService:Start()
 		ReplicatedStorage:SetAttribute("PhaseSecondsLeft", math.floor(info.secondsLeft))
 		if info.phase ~= lastPhase then
 			applyLighting(info.phase, lastPhase == nil)
+			local chance = if info.phase == "Night" then World.Weather.NightRainChance else World.Weather.DayRainChance
+			ReplicatedStorage:SetAttribute("Raining", rng:NextNumber() < chance)
 			lastPhase = info.phase
 			ReplicatedStorage:SetAttribute("Phase", info.phase)
 			print("[WorldService] phase ->", info.phase)

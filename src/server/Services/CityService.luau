@@ -15,6 +15,9 @@ local CityService = {}
 
 local NIGHT_LIGHT_TAG = "NightLight" -- lights switched on at night
 local NIGHT_GLOW_TAG = "NightGlow" -- parts that become Neon at night
+local FLICKER_TAG = "FlickerSign" -- neon signs that flicker (client AmbienceController)
+local FIRE_LIGHT_TAG = "FireLight" -- lights that flicker like fire
+local WET_TAG = "WetSurface" -- ground that shines when it rains
 
 local built = false
 
@@ -175,6 +178,9 @@ local function buildBuildings(parent: Instance, rng: Random, side: number, groun
 				parent = parent,
 			})
 			surfaceText(board, Enum.NormalId.Front, pick(rng, World.Signs), signColor, Enum.Font.Arcade)
+			if rng:NextNumber() < World.Props.FlickerSignChance then
+				CollectionService:AddTag(board, FLICKER_TAG)
+			end
 			local light = Instance.new("PointLight")
 			light.Color = hex(signColor)
 			light.Range = 18
@@ -184,6 +190,141 @@ local function buildBuildings(parent: Instance, rng: Random, side: number, groun
 			CollectionService:AddTag(light, NIGHT_LIGHT_TAG)
 		end
 		x += w
+	end
+end
+
+-- Street clutter -----------------------------------------------------------------------
+
+local function trashBag(parent: Instance, rng: Random, pos: Vector3)
+	local bag = part({
+		name = "TrashBag",
+		size = Vector3.new(2, 1.6, 2),
+		cframe = CFrame.new(pos + Vector3.new(0, 0.8, 0)) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), rng:NextNumber(-0.2, 0.2)),
+		color = "#141418",
+		material = Enum.Material.SmoothPlastic,
+		parent = parent,
+	})
+	bag.Reflectance = 0.08
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = bag
+end
+
+local function dumpster(parent: Instance, pos: Vector3, facing: number)
+	local cf = CFrame.new(pos) * CFrame.Angles(0, facing, 0)
+	part({ name = "Dumpster", size = Vector3.new(6, 3.4, 3.2), cframe = cf * CFrame.new(0, 1.9, 0), color = "#2F4F3A", material = Enum.Material.Metal, parent = parent })
+	part({ name = "DumpsterLid", size = Vector3.new(6.2, 0.3, 3.4), cframe = cf * CFrame.new(0, 3.75, 0.1) * CFrame.Angles(math.rad(-8), 0, 0), color = "#26402F", material = Enum.Material.Metal, parent = parent })
+	part({ name = "DumpsterRim", size = Vector3.new(6.3, 0.4, 0.4), cframe = cf * CFrame.new(0, 2.6, 1.7), color = "#1E2E24", material = Enum.Material.Metal, parent = parent })
+end
+
+local function fireBarrel(parent: Instance, pos: Vector3)
+	local barrel = part({
+		name = "FireBarrel",
+		size = Vector3.new(3, 2.2, 2.2),
+		cframe = CFrame.new(pos + Vector3.new(0, 1.5, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		color = "#5A3A28",
+		material = Enum.Material.CorrodedMetal,
+		shape = Enum.PartType.Cylinder,
+		parent = parent,
+	})
+	local top = part({
+		name = "FireTop",
+		size = Vector3.new(1.6, 0.2, 1.6),
+		cframe = CFrame.new(pos + Vector3.new(0, 3.1, 0)),
+		color = "#1A1410",
+		canCollide = false,
+		parent = parent,
+	})
+	top.Transparency = 1
+	local fire = Instance.new("Fire")
+	fire.Size = 4
+	fire.Heat = 7
+	fire.Color = hex("#FF8A2B")
+	fire.SecondaryColor = hex("#FF3B1F")
+	fire.Parent = top
+	local light = Instance.new("PointLight")
+	light.Color = hex("#FF9A4A")
+	light.Range = 16
+	light.Brightness = 1.6
+	light.Shadows = true
+	light.Parent = top
+	CollectionService:AddTag(light, FIRE_LIGHT_TAG)
+	barrel.CastShadow = true
+end
+
+local function steamVent(parent: Instance, pos: Vector3)
+	local lid = part({
+		name = "Manhole",
+		size = Vector3.new(0.1, 3, 3),
+		cframe = CFrame.new(pos + Vector3.new(0, 0.05, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		color = "#202024",
+		material = Enum.Material.DiamondPlate,
+		shape = Enum.PartType.Cylinder,
+		canCollide = false,
+		parent = parent,
+	})
+	lid.CanQuery = false
+	local smoke = Instance.new("Smoke")
+	smoke.Color = hex("#C8C8D0")
+	smoke.Opacity = 0.12
+	smoke.RiseVelocity = 5
+	smoke.Size = 4
+	smoke.TimeScale = 0.6
+	smoke.Parent = lid
+end
+
+local function puddle(parent: Instance, rng: Random, pos: Vector3)
+	local d = rng:NextNumber(3, 8)
+	local p = part({
+		name = "Puddle",
+		size = Vector3.new(0.04, d, d * rng:NextNumber(0.5, 0.9)),
+		cframe = CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, math.pi), math.rad(90)),
+		color = "#15171F",
+		material = Enum.Material.Glass,
+		shape = Enum.PartType.Cylinder,
+		transparency = 0.25,
+		canCollide = false,
+		parent = parent,
+	})
+	p.Reflectance = 0.35
+	p.CanQuery = false
+	p.CastShadow = false
+end
+
+-- Clutter in the gaps between plots, steam and puddles on the street.
+local function buildClutter(parent: Instance, rng: Random, O: Vector3, streetY: number, topY: number, L: number, rowLength: number, stride: number)
+	local B = Economy.Building
+	local halfStreet = World.StreetWidth / 2
+	-- spots between plots (and at both ends of each row), on both sides
+	local spots: { { x: number, side: number } } = {}
+	for _, side in { -1, 1 } do
+		for i = 0, World.PlotsPerSide do
+			local x = if i == 0
+				then O.X - rowLength / 2 - World.PlotGap / 2
+				elseif i == World.PlotsPerSide then O.X + rowLength / 2 + World.PlotGap / 2
+				else O.X - rowLength / 2 + i * stride - World.PlotGap / 2
+			table.insert(spots, { x = x, side = side })
+		end
+	end
+	local function spotPos(spot: { x: number, side: number }, depth: number, jitter: number): Vector3
+		local z = O.Z + spot.side * (halfStreet + World.SidewalkWidth + depth)
+		return Vector3.new(spot.x + rng:NextNumber(-jitter, jitter), topY, z)
+	end
+	for i = 1, math.min(World.Props.Dumpsters, #spots) do
+		local spot = spots[rng:NextInteger(1, #spots)]
+		dumpster(parent, spotPos(spot, B.PlotSizeZ - 4, 0.5), if spot.side == -1 then 0 else math.pi)
+	end
+	for i = 1, World.Props.FireBarrels do
+		fireBarrel(parent, spotPos(spots[rng:NextInteger(1, #spots)], rng:NextNumber(8, B.PlotSizeZ - 12), 1.5))
+	end
+	for i = 1, World.Props.TrashBags do
+		trashBag(parent, rng, spotPos(spots[rng:NextInteger(1, #spots)], rng:NextNumber(4, B.PlotSizeZ - 2), 3))
+	end
+	for i = 1, World.Props.SteamVents do
+		steamVent(parent, Vector3.new(O.X + rng:NextNumber(-L / 2 + 20, L / 2 - 20), streetY, O.Z + rng:NextNumber(-halfStreet + 4, halfStreet - 4)))
+	end
+	for i = 1, World.Props.Puddles do
+		puddle(parent, rng, Vector3.new(O.X + rng:NextNumber(-L / 2 + 10, L / 2 - 10), streetY + 0.02, O.Z + rng:NextNumber(-halfStreet + 2, halfStreet - 2)))
 	end
 end
 
@@ -298,6 +439,9 @@ local function setupLighting()
 	cc.Saturation = L.ColorCorrection.Saturation
 	cc.Contrast = L.ColorCorrection.Contrast
 	cc.TintColor = hex(L.ColorCorrection.TintColor)
+	Lighting.EnvironmentDiffuseScale = 1
+	Lighting.EnvironmentSpecularScale = 1
+	Lighting.GlobalShadows = true
 end
 
 -- Builds the city once. Returns workspace.Hideouts.
@@ -328,6 +472,7 @@ function CityService.EnsureBuilt(): Instance
 	local lights = folder("StreetLights", city)
 	local buildings = folder("Buildings", city)
 	local spawns = folder("CustomerSpawns", city)
+	local clutter = folder("Clutter", city)
 
 	part({
 		name = "Street",
@@ -414,6 +559,13 @@ function CityService.EnsureBuilt(): Instance
 			})
 			s.CanQuery = false
 			s:SetAttribute("Side", side)
+		end
+	end
+
+	buildClutter(clutter, rng, O, streetY, topY, L, rowLength, stride)
+	for _, p in ground:GetChildren() do
+		if p.Name == "Street" or p.Name == "Sidewalk" or p.Name == "Lot" then
+			CollectionService:AddTag(p, WET_TAG)
 		end
 	end
 
