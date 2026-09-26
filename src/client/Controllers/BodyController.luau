@@ -17,11 +17,12 @@ local BodyController = {}
 local B = Mood.Body
 local RANGE = 160 -- studs from the camera
 
+type Joint = { motor: Motor6D, c0: CFrame } -- c0 = the joint's rest offset, restored + offset each frame
 type Rig = {
 	root: BasePart,
-	rootJoint: Motor6D?,
-	waist: Motor6D?,
-	neck: Motor6D?,
+	rootJoint: Joint?,
+	waist: Joint?,
+	neck: Joint?,
 	lean: number,
 	roll: number,
 	pitch: number,
@@ -31,10 +32,20 @@ type Rig = {
 local rigs: { [Model]: Rig } = {}
 local localLook = { pitch = 0, yaw = 0 }
 
-local function joint(model: Model, partName: string, name: string): Motor6D?
+-- Offsets go on C0 (never touched by the Animator), from the saved rest value: nothing accumulates.
+local function joint(model: Model, partName: string, name: string): Joint?
 	local part = model:FindFirstChild(partName)
 	local m = part and part:FindFirstChild(name)
-	return if m and m:IsA("Motor6D") then m else nil
+	if m and m:IsA("Motor6D") then
+		return { motor = m, c0 = m.C0 }
+	end
+	return nil
+end
+
+local function apply(j: Joint?, offset: CFrame)
+	if j and j.motor.Parent then
+		j.motor.C0 = j.c0 * offset
+	end
 end
 
 local function rigOf(model: Model): Rig?
@@ -110,16 +121,9 @@ local function step(dt: number)
 		rig.roll += (targetRoll - rig.roll) * k
 		rig.pitch += (targetPitch * B.HeadFollow - rig.pitch) * k
 		rig.yaw += (targetYaw * B.HeadFollow - rig.yaw) * k
-		local rj, waist, neck = rig.rootJoint, rig.waist, rig.neck
-		if rj then
-			rj.Transform *= CFrame.Angles(math.rad(-rig.lean), 0, math.rad(rig.roll))
-		end
-		if waist then
-			waist.Transform *= CFrame.Angles(math.rad(rig.pitch * 0.3), math.rad(rig.yaw * 0.3), 0)
-		end
-		if neck then
-			neck.Transform *= CFrame.Angles(math.rad(rig.pitch * 0.7), math.rad(rig.yaw * 0.7), 0)
-		end
+		apply(rig.rootJoint, CFrame.Angles(math.rad(-rig.lean), 0, math.rad(rig.roll)))
+		apply(rig.waist, CFrame.Angles(math.rad(rig.pitch * 0.3), math.rad(rig.yaw * 0.3), 0))
+		apply(rig.neck, CFrame.Angles(math.rad(rig.pitch * 0.7), math.rad(rig.yaw * 0.7), 0))
 	end
 	for model in rigs do
 		if model.Parent == nil then

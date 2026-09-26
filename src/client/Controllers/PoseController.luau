@@ -18,10 +18,15 @@ local CASH = {
 	Offset = CFrame.new(0, -0.35, -0.2),
 }
 
+-- base = the joint's Transform without our pose; written = what we set last frame. When the
+-- Animator does not drive a joint, its Transform still holds `written` next frame: we then blend from
+-- `base` again instead of piling up, and put `base` back when the pose ends.
+type JointState = { base: CFrame, written: CFrame? }
 type Playing = {
 	def: Animations.Procedural,
 	started: number,
 	joints: { [string]: Motor6D },
+	states: { [Motor6D]: JointState },
 	prop: BasePart?,
 }
 
@@ -75,7 +80,15 @@ end
 local function stop(model: Model)
 	local p = playing[model]
 	playing[model] = nil
-	if p and p.prop then
+	if p == nil then
+		return
+	end
+	for joint, st in p.states do
+		if joint.Parent and st.written and joint.Transform == st.written then
+			joint.Transform = st.base
+		end
+	end
+	if p.prop then
 		p.prop:Destroy()
 	end
 end
@@ -90,6 +103,7 @@ function PoseController.Play(model: Model, name: string)
 		def = def,
 		started = os.clock(),
 		joints = findJoints(model),
+		states = {},
 		prop = if def.prop == "Cash" then makeCash(model) else nil,
 	}
 	playing[model] = entry
@@ -107,8 +121,18 @@ local function step()
 		for jointName, angles in Pose.Sample(p.def, t) do
 			local joint = p.joints[jointName]
 			if joint and joint.Parent then
+				local st = p.states[joint]
+				local current = joint.Transform
+				if st == nil then
+					st = { base = current, written = nil }
+					p.states[joint] = st
+				elseif st.written == nil or current ~= st.written then
+					st.base = current -- the Animator posed it this frame
+				end
 				local target = CFrame.Angles(math.rad(angles.x), math.rad(angles.y), math.rad(angles.z))
-				joint.Transform = joint.Transform:Lerp(target, weight)
+				local out = st.base:Lerp(target, weight)
+				joint.Transform = out
+				st.written = out
 			end
 		end
 	end
