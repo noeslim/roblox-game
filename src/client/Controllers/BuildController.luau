@@ -17,6 +17,7 @@ local Net = require(Shared.Net)
 local ModelFactory = require(Shared.Visual.ModelFactory)
 local PlotUtil = require(Shared.Visual.PlotUtil)
 local UI = require(script.Parent.Parent.UI)
+local Freeze = require(script.Parent.Parent.Freeze)
 local Effects = require(script.Parent.Parent.Effects)
 local Notify = require(script.Parent.Parent.Notify)
 
@@ -82,14 +83,6 @@ local currentCategory = Buildables.Categories[1]
 
 local function isTouch(): boolean
 	return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-end
-
-local function getControls(): any
-	local ok, controls = pcall(function()
-		local module = require(player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule") :: ModuleScript) :: any
-		return module:GetControls()
-	end)
-	return if ok then controls else nil
 end
 
 -- Local copy of the stash, rebuilt from the replicated models, for instant green/red feedback.
@@ -450,10 +443,7 @@ local function enter()
 	focus = PlotUtil.GetOrigin(plot :: Instance).Position
 	height = SETTINGS.CameraHeight
 	workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
-	local controls = getControls()
-	if controls then
-		controls:Disable()
-	end
+	Freeze.Set(true)
 	bar.Visible = true
 	hintLabel.Visible = true
 	toggleButton.Text = "EXIT"
@@ -469,10 +459,7 @@ local function exit()
 	setHover(nil)
 	workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
 	setHouseHidden(false)
-	local controls = getControls()
-	if controls then
-		controls:Enable()
-	end
+	Freeze.Set(false)
 	bar.Visible = false
 	hintLabel.Visible = false
 	placeButton.Visible = false

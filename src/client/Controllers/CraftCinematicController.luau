@@ -18,6 +18,7 @@ local Visual = require(Shared.Config.Visual)
 local Assembly = require(Shared.Logic.Assembly)
 local ModelFactory = require(Shared.Visual.ModelFactory)
 local UI = require(script.Parent.Parent.UI)
+local Freeze = require(script.Parent.Parent.Freeze)
 
 local CraftCinematicController = {}
 
@@ -51,14 +52,6 @@ local function sound(id: string, pitch: number?)
 	s.Ended:Connect(function()
 		s:Destroy()
 	end)
-end
-
-local function getControls(): any
-	local ok, controls = pcall(function()
-		local module = require(player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule") :: ModuleScript) :: any
-		return module:GetControls()
-	end)
-	return if ok then controls else nil
 end
 
 local function setCharacterHidden(hidden: boolean)
@@ -236,10 +229,7 @@ local function emergencyRestore()
 	local camera = workspace.CurrentCamera
 	camera.CameraType = Enum.CameraType.Custom
 	setCharacterHidden(false)
-	local controls = getControls()
-	if controls then
-		controls:Enable()
-	end
+	Freeze.Set(false)
 	local leftover = workspace:FindFirstChild("CraftCinematic")
 	if leftover then
 		leftover:Destroy()
@@ -277,10 +267,7 @@ play = function(bench: BasePart, partIds: { [string]: string }, result: any, onD
 	local camera = workspace.CurrentCamera
 	local oldFov = camera.FieldOfView
 	local startCF = camera.CFrame
-	local controls = getControls()
-	if controls then
-		controls:Disable()
-	end
+	Freeze.Set(true)
 	setCharacterHidden(true)
 
 	local folder = Instance.new("Folder")
@@ -367,9 +354,7 @@ play = function(bench: BasePart, partIds: { [string]: string }, result: any, onD
 		camera.CameraType = Enum.CameraType.Custom
 		camera.FieldOfView = oldFov
 		setCharacterHidden(false)
-		if controls then
-			controls:Enable()
-		end
+		Freeze.Set(false)
 		TweenService:Create(fade, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
 		task.delay(0.35, function()
 			barGui:Destroy()
