@@ -1,46 +1,113 @@
 --!strict
--- Shows the player's money (read from the "Money" attribute set by DataService). Placeholder style.
+-- Money counter (top right) + dealer level and XP bar. Reads the attributes set by DataService.
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+local UI = require(script.Parent.Parent.UI)
+local Effects = require(script.Parent.Parent.Effects)
 
 local MoneyHudController = {}
 
 local STYLE = {
-	TextColor = Color3.fromRGB(120, 255, 140),
-	Background = Color3.fromRGB(12, 10, 24),
+	Width = 190,
+	MoneyHeight = 40,
+	LevelHeight = 22,
+	CountSeconds = 0.5, -- the number rolls up to the new value
 }
-
-local function formatMoney(n: number): string
-	local s = tostring(math.floor(n))
-	local formatted = s:reverse():gsub("(%d%d%d)", "%1 "):reverse()
-	return "$ " .. formatted:gsub("^ ", "")
-end
 
 function MoneyHudController:Start()
 	local player = Players.LocalPlayer
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "MoneyHud"
-	gui.ResetOnSpawn = false
-	gui.Parent = player:WaitForChild("PlayerGui")
+	local gui = UI.Screen("MoneyHud", 10)
 
-	local label = Instance.new("TextLabel")
-	label.AnchorPoint = Vector2.new(1, 0)
-	label.Position = UDim2.new(1, -12, 0, 12)
-	label.Size = UDim2.fromOffset(180, 36)
-	label.BackgroundColor3 = STYLE.Background
-	label.BackgroundTransparency = 0.25
-	label.Font = Enum.Font.GothamBlack
-	label.TextSize = 18
-	label.TextColor3 = STYLE.TextColor
-	label.Parent = gui
-	Instance.new("UICorner", label).CornerRadius = UDim.new(0, 10)
+	local holder = UI.new("Frame", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -12, 0, 12),
+		Size = UDim2.fromOffset(STYLE.Width, STYLE.MoneyHeight + STYLE.LevelHeight + 6),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	})
+	local money = UI.Panel({
+		Name = "MoneyPanel",
+		Size = UDim2.new(1, 0, 0, STYLE.MoneyHeight),
+		BackgroundColor3 = UI.Theme.Background,
+		Parent = holder,
+	})
+	UI.Stroke(money, UI.Theme.Money, 2)
+	local moneyLabel = UI.Label({
+		Name = "MoneyLabel",
+		Size = UDim2.fromScale(1, 1),
+		Text = "...",
+		TextColor3 = UI.Theme.Money,
+		Font = UI.Theme.FontBlack,
+		TextSize = 22,
+		Parent = money,
+	})
 
-	local function refresh()
-		local money = player:GetAttribute("Money")
-		label.Text = if type(money) == "number" then formatMoney(money) else "..."
+	local level = UI.Panel({
+		Position = UDim2.new(0, 0, 0, STYLE.MoneyHeight + 6),
+		Size = UDim2.new(1, 0, 0, STYLE.LevelHeight),
+		BackgroundColor3 = UI.Theme.Background,
+		Parent = holder,
+	})
+	local xpFill = UI.new("Frame", {
+		Size = UDim2.fromScale(0, 1),
+		BackgroundColor3 = UI.Theme.Accent,
+		BackgroundTransparency = 0.3,
+		BorderSizePixel = 0,
+		Parent = level,
+	})
+	UI.Corner(xpFill)
+	local levelLabel = UI.Label({
+		Size = UDim2.fromScale(1, 1),
+		Text = "LV 1",
+		TextSize = 14,
+		ZIndex = 2,
+		Parent = level,
+	})
+
+	local shown = 0
+	local counter = Instance.new("NumberValue")
+	counter.Changed:Connect(function(v)
+		moneyLabel.Text = UI.Money(v)
+	end)
+
+	local function refreshMoney()
+		local value = player:GetAttribute("Money")
+		if type(value) ~= "number" then
+			return
+		end
+		if value > shown and shown > 0 then
+			Effects.Bounce(money, 1.1)
+		elseif value < shown then
+			moneyLabel.TextColor3 = UI.Theme.Danger
+			task.delay(0.4, function()
+				moneyLabel.TextColor3 = UI.Theme.Money
+			end)
+		end
+		if shown == 0 then
+			moneyLabel.Text = UI.Money(value)
+		end
+		shown = value
+		TweenService:Create(counter, TweenInfo.new(STYLE.CountSeconds, Enum.EasingStyle.Quad), { Value = value }):Play()
 	end
 
-	player:GetAttributeChangedSignal("Money"):Connect(refresh)
-	refresh()
+	local function refreshLevel()
+		local lv = player:GetAttribute("Level")
+		local xp = player:GetAttribute("Xp")
+		local need = player:GetAttribute("XpToNext")
+		if type(lv) == "number" then
+			levelLabel.Text = "LV " .. lv
+		end
+		if type(xp) == "number" and type(need) == "number" and need > 0 then
+			TweenService:Create(xpFill, TweenInfo.new(0.3), { Size = UDim2.fromScale(math.clamp(xp / need, 0, 1), 1) }):Play()
+		end
+	end
+
+	player:GetAttributeChangedSignal("Money"):Connect(refreshMoney)
+	player:GetAttributeChangedSignal("Level"):Connect(refreshLevel)
+	player:GetAttributeChangedSignal("Xp"):Connect(refreshLevel)
+	refreshMoney()
+	refreshLevel()
 end
 
 return MoneyHudController

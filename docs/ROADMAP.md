@@ -16,19 +16,19 @@ Légende coût : 🟢 petit · 🟡 moyen · 🔴 gros (mérite Opus)
 **1.1 🟡 Profils et sauvegarde** ✅
 > Lis CLAUDE.md. Ajoute ProfileStore dans `src/server/Packages`, crée `src/server/Services/DataService.luau` qui charge/sauvegarde le profil (argent, inventaire de pièces, armes, niveau, planque sérialisée). Branche `Ledger` dessus. Tests Lune pour le schéma et la migration de version du profil.
 
-**1.2 🔴 Construction libre (serveur)**
+**1.2 🔴 Construction libre (serveur)** ✅ (à valider dans Studio)
 > Lis CLAUDE.md et GAME_DESIGN §5. Crée `src/shared/Config/Buildables.luau` (20 objets de départ) et `src/server/Services/BuildService.luau` : placer, déplacer, pivoter, supprimer, avec validation serveur via `Logic/Grid` (limites du terrain, collisions, limite d'objets, argent). Sérialisation compacte de la planque. Tests Lune pour la sérialisation.
 
-**1.3 🟡 Construction libre (client)**
+**1.3 🟡 Construction libre (client)** ✅ (à valider dans Studio)
 > Crée `src/client/Controllers/BuildController.luau` : mode construction, caméra aérienne, fantôme vert/rouge, rotation, raccourcis PC + boutons mobile. Le client envoie seulement des intentions au serveur.
 
-**1.4 🟡 Établi**
+**1.4 🟡 Établi** ✅ (à valider dans Studio)
 > Branche `Logic/WeaponCrafting` : `CraftService` serveur + UI de l'établi (5 emplacements). Animation de fabrication côté client via `Effects`.
 
-**1.5 🔴 Clients PNJ et vente**
+**1.5 🔴 Clients PNJ et vente** ✅ (à valider dans Studio)
 > `CustomerService` : spawn des PNJ, file d'attente, pathfinding jusqu'au comptoir, décision d'achat via `Logic/Customer`, patience. `SaleService` valide la vente avec `Ledger` + `ComboTracker`. Remote vers le client pour jouer l'animation de deal.
 
-**1.6 🟢 Module d'effets**
+**1.6 🟢 Module d'effets** ✅ (à valider dans Studio)
 > `src/client/Effects.luau` : pop, rebond, billets qui volent vers le compteur, secousse caméra, texte flottant. Tous les réglages en paramètres. (Ensuite, régler les valeurs à la main dans Studio.)
 
 👉 **Fin de phase 1 : premier test avec des potes.**

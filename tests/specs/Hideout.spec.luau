@@ -99,4 +99,14 @@ return function(t)
 		h:SetMaxObjects(3)
 		t.truthy(h:Place("rug", 0, 0, 0))
 	end)
+
+	t.test("FromObjects keeps server ids for move previews", function()
+		local h = Hideout.FromObjects({
+			{ id = "o7", buildableId = "storage_crate", x = 0.5, z = 0.5, rotation = 0 },
+			{ id = "o9", buildableId = "unknown", x = 0, z = 0, rotation = 0 },
+		}, plot, opts, cat)
+		t.eq(h:Count(), 1)
+		t.truthy(h:Validate("storage_crate", 1.5, 0.5, 0, "o7"))
+		t.falsy(h:Validate("storage_crate", 1.5, 0.5, 0))
+	end)
 end

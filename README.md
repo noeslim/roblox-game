@@ -24,7 +24,7 @@ lune run tests/run         # tests de la logique
 lune run tests/syntax      # vérification de syntaxe
 ```
 
-Premier test : `rojo serve`, connecte Studio, appuie sur Play. Tu dois voir en haut de l'écran "☀️ JOUR 9:59" qui défile, et le ciel qui change avec le cycle jour/nuit (10 min de jour, 6 min de nuit ; réglable dans `src/shared/Config/Economy.luau`).
+Premier test : `rojo serve`, connecte Studio, appuie sur Play. Tu apparais dans ta planque, dans une rue générée automatiquement. La checklist complète est dans [`docs/SETUP_STUDIO.md`](docs/SETUP_STUDIO.md) (section 7). Le jeu est en anglais pour les joueurs.
 
 ## Coder avec Claude en cloud
 

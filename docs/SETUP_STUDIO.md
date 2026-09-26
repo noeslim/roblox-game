@@ -68,16 +68,35 @@ Redémarre Studio : un bouton **Rojo** apparaît dans l'onglet *Plugins*.
 ⚠️ **Ne modifie pas les scripts dans Studio** : Rojo les écrase à la prochaine synchro. Modifie-les dans VS Code (ou laisse Claude le faire).
 La map, les modèles et les décors que tu construis dans Workspace ne sont **pas** touchés par Rojo. Sauvegarde-les avec *File → Publish* ou *Save*.
 
-## 7. Ce que tu dois voir (état actuel : étape 1.1)
+## 7. Ce que tu dois voir (état actuel : phase 1)
 
-- En haut au centre : **☀️ JOUR 9:59** qui défile (cycle jour/nuit).
-- En haut à droite : **$ 500** (ton argent, chargé depuis ta sauvegarde).
+Le jeu est **en anglais** pour les joueurs.
+
+- Une **rue de nuit** générée automatiquement (à 300 studs de ta maison, vers +Z) : 8 terrains, bâtiments avec fenêtres allumées, enseignes néon, lampadaires. Ta propre construction dans Workspace n'est pas touchée.
+- Ton personnage apparaît **sur ton terrain**, derrière une table pliante (le comptoir), avec un **établi** et deux caisses. Le panneau devant affiche « TonPseudo's Shop ».
+- En haut au centre : **☀️ DAY 9:59**. En haut à droite : ton argent et ton niveau (**LV 1**).
+- À gauche : le bouton **BUILD**.
 - Dans **Output** :
   ```
   [ProfileStore]: Roblox API services available - data will be saved
-  [Server] started 2 services: DataService, WorldService
-  [DataService] loaded TonPseudo ($500, v1)
+  [CityService] city built: 8 plots
+  [Server] started 8 services: ...
+  [DataService] loaded TonPseudo ($500, v2)
   ```
+
+⚙️ Dans **File → Experience Settings → Places**, règle la taille du serveur à **8 joueurs** (il y a 8 terrains).
+
+### Checklist de test de la phase 1
+
+1. **Établi** : approche-toi de l'établi, appuie sur **E**. Onglet CRAFT : les 5 pièces « Street » sont choisies, le blaster tourne dans l'aperçu → **CRAFT**. Tu dois voir les pièces voler, s'assembler et l'arme tourner au-dessus de l'établi.
+2. **Fournisseur** : onglet SUPPLIER → achète un set de pièces (l'argent baisse).
+3. **Prix** : onglet WEAPONS → boutons − / + / SUGGESTED.
+4. **Clients** : au bout de quelques secondes, des PNJ arrivent par la rue, entrent et font la queue devant la table. Le premier affiche ce qu'il veut, son budget ($ / $$ / $$$) et une barre de patience.
+5. **Vente** : place-toi près du client, appuie sur **E** (« Deal ») → **OFFER**. Accepté : billets qui volent vers ton compteur, « +$228 », son. Ventes enchaînées en moins de 8 s = **COMBO**.
+6. **Construction** : touche **B** (ou bouton BUILD). Caméra du dessus, WASD pour bouger, molette pour zoomer. Choisis un objet en bas → fantôme **vert** (OK) ou **rouge** (bloqué) → clic pour poser, **R** pour tourner, **M** pour déplacer, **X** pour vendre (50 % remboursé). **B** pour sortir.
+7. **Sauvegarde** : Stop puis Play → tes meubles, tes armes et ton argent sont toujours là.
+
+Si quelque chose ne marche pas : copie les lignes **rouges** d'Output et envoie-les à Claude.
 
 ### Tester la sauvegarde
 
@@ -88,6 +107,14 @@ La map, les modèles et les décors que tu construis dans Workspace ne sont **pa
    ```
    Le compteur passe à **$ 750**. (Cette commande ne marche que dans Studio.)
 3. **Stop**, puis **Play** à nouveau : tu dois retrouver **$ 750**. ✅ La sauvegarde marche.
+
+### Remplacer les modèles provisoires par de vrais modèles 3D
+
+Les objets et armes sont faits de pièces simples générées par le code. Pour mettre tes propres modèles :
+1. Crée dans Studio un dossier `ReplicatedStorage > Assets > Buildables` (en dehors des dossiers gérés par Rojo, donc crée-le à la main dans Studio et sauvegarde le place).
+2. Mets-y un Model nommé exactement comme l'id de l'objet (ex. `counter_wood`, liste dans `src/shared/Config/Buildables.luau`), à la bonne taille, pivot au centre.
+3. Le jeu utilisera automatiquement ton modèle à la place du modèle provisoire.
+Même principe pour les armes : `Assets > Weapons > Street` (nom du set).
 
 ## 8. Récupérer le travail de Claude
 

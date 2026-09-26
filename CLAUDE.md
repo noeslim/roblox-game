@@ -2,6 +2,7 @@
 
 Lis ce fichier en entier avant de coder. Le design est dans `docs/GAME_DESIGN.md`, le plan dans `docs/ROADMAP.md`.
 Les auteurs parlent français : réponds en français, mais le code, les noms et les commentaires sont en anglais.
+**Le jeu est en anglais** : tout texte visible par les joueurs (UI, PNJ, erreurs, panneaux) est en anglais. Les messages d'erreur et répliques des PNJ sont dans `src/shared/Config/Messages.luau`.
 
 ## Le jeu en bref
 Jeu de dealer d'armes (univers fictif, armes stylisées, pas de sang) avec ambiance ville criminelle nocturne façon Criminality. Construction libre de sa planque, fabrication d'armes à sa marque, vente à des PNJ et aux joueurs de deux camps en guerre, descentes d'inspecteurs, marché noir de nuit.
@@ -21,7 +22,11 @@ src/
   server/            -> ServerScriptService.Server
     Services/        services serveur (DataService, BuildService, SaleService...)
   client/            -> StarterPlayer.StarterPlayerScripts.Client
-    Controllers/     UI, caméra, construction, effets
+    Controllers/     UI, caméra, construction, effets (démarrés automatiquement, méthode :Start())
+    UI.luau, Effects.luau, State.luau, Notify.luau   modules client partagés
+  shared/Visual/     ModelFactory (modèles 3D procéduraux), PlotUtil (coordonnées de terrain)
+  shared/Net.luau    liste des Remotes (créés par server/Lib/ServerNet, avec rate-limit)
+  server/Lib/        ServerNet, NpcMover (modules serveur qui ne sont pas des services)
 tests/
   run.luau           lanceur : `lune run tests/run`
   specs/*.spec.luau  un fichier de test par module de Logic
@@ -82,4 +87,10 @@ Assertions disponibles : `t.eq`, `t.near`, `t.truthy`, `t.falsy`, `t.throws`.
 - `DataService` : charge le profil à la connexion (ProfileStore, session verrouillée), kick si échec ou profil d'une version future, publie les attributs `Money` / `Level` sur le Player. API : `GetLedger(player)`, `GetData(player)`, `IsLoaded(player)`, signal `PlayerLoaded`. Studio seulement : attribut `DebugGrant` pour ajouter de l'argent. `MoneyHudController` affiche l'argent.
 - Pour changer la forme du profil : incrémenter `ProfileSchema.VERSION` + ajouter une migration (voir l'en-tête du module).
 - Guide d'installation pour les auteurs : `docs/SETUP_STUDIO.md`.
-- Prochaine étape : ROADMAP 1.2 (construction libre, serveur).
+- Phase 1 (1.2 → 1.6) écrite d'un coup à la demande des auteurs, **pas encore validée dans Studio** :
+  - `CityService` génère la rue (Config/World : 8 terrains, bâtiments, néons, lampadaires). Si `workspace.City` existe déjà, rien n'est généré.
+  - `PlotService` attribue un terrain (panneau "<Name>'s Shop"), `BuildService` (placer/déplacer/vendre, validé par `Logic/Hideout`), `CraftService` (établi, fournisseur, prix), `CustomerService` (PNJ, file, patience), `SaleService` (vente, contre-offre, combo, pourboire).
+  - Client : `BuildController` (touche B, caméra aérienne, fantôme vert/rouge), `WorkbenchController`, `SellController`, `FxController` (animations), `MoneyHudController` (argent + niveau).
+  - Profil v2 : planque de départ, prix des armes, stats. 20 objets dans `Config/Buildables` (modèles en pièces simples, remplaçables par `ReplicatedStorage.Assets.Buildables.<id>`).
+- Réglages à faire dans Studio : valeurs dans `Effects.Settings`, `UI.Theme`, `Config/World`, `Config/Visual` (sons à remplacer).
+- Prochaine étape : faire tester la phase 1 dans Studio et corriger, puis ROADMAP 2.1 (ambiance nuit : pluie, néons, musique).

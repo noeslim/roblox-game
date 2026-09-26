@@ -35,7 +35,7 @@ function PhaseHudController:Start()
 		local phase = ReplicatedStorage:GetAttribute("Phase") or "Day"
 		local left = ReplicatedStorage:GetAttribute("PhaseSecondsLeft") or 0
 		local color = if phase == "Night" then STYLE.NightColor else STYLE.DayColor
-		label.Text = ("%s  %d:%02d"):format(if phase == "Night" then "🌙 NUIT" else "☀️ JOUR", left // 60, left % 60)
+		label.Text = ("%s  %d:%02d"):format(if phase == "Night" then "🌙 NIGHT" else "☀️ DAY", left // 60, left % 60)
 		label.TextColor3 = color
 		stroke.Color = color
 	end

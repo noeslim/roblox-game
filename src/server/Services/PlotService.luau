@@ -42,12 +42,14 @@ local function sortedPlots(): { Instance }
 	return plots
 end
 
--- Where a character appears on its plot: just inside the street edge, facing the stash.
+-- Where a character appears on its plot: behind the starter counter, facing the street.
+local SPAWN_LOCAL = Vector3.new(0, 3, 8)
+
 function PlotService.GetSpawnCFrame(plot: Instance): CFrame
 	local origin = PlotUtil.GetOrigin(plot)
 	local _, sizeZ = PlotUtil.GetSize(plot)
-	local pos = origin * CFrame.new(0, 3, sizeZ / 2 - 3)
-	return CFrame.lookAt(pos.Position, (origin * CFrame.new(0, 3, 0)).Position)
+	local pos = origin * CFrame.new(SPAWN_LOCAL)
+	return CFrame.lookAt(pos.Position, (origin * CFrame.new(0, 3, sizeZ / 2)).Position)
 end
 
 local function bringCharacter(player: Player, plot: Instance)

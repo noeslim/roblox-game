@@ -186,6 +186,18 @@ function Hideout.Remove(self: Hideout, id: any): (Object?, string?)
 	return nil, "UnknownObject"
 end
 
+-- Rebuilds a stash from objects that already have ids (the client mirrors the server's stash
+-- to preview placements). No validation: the server stays the authority.
+function Hideout.FromObjects(objects: { Object }, plot: Plot, opts: Options, catalogue: Catalogue): Hideout
+	local h = Hideout.new(plot, opts, catalogue)
+	for _, o in objects do
+		if catalogue[o.buildableId] then
+			table.insert(h._objects, table.clone(o))
+		end
+	end
+	return h
+end
+
 -- Save format ---------------------------------------------------------------
 
 local function fmt(n: number): string
