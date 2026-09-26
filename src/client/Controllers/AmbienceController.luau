@@ -1,6 +1,6 @@
 --!strict
 -- Client-side atmosphere: rain around the camera, wet shiny ground, flickering neon signs,
--- fire light flicker, city / rain loops and distant sirens. Settings: Config/World (Weather, Sounds).
+-- fire light flicker, traffic lights, city / rain loops and distant sirens. Settings: Config/World (Weather, Sounds).
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -8,7 +8,9 @@ local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
-local World = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("World"))
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local World = require(Shared:WaitForChild("Config"):WaitForChild("World"))
+local TrafficCycle = require(Shared:WaitForChild("Logic"):WaitForChild("TrafficCycle"))
 
 local AmbienceController = {}
 
@@ -134,6 +136,36 @@ local function fireLoop()
 	end
 end
 
+-- Traffic lights: every client runs the same cycle on the server clock, so they all agree.
+local function trafficLoop()
+	local T = World.TrafficLights
+	local lastNs, lastEw = "", ""
+	while true do
+		task.wait(0.5)
+		local ns, ew = TrafficCycle.State(workspace:GetServerTimeNow(), T)
+		if ns ~= lastNs or ew ~= lastEw then
+			lastNs, lastEw = ns, ew
+			for _, p in CollectionService:GetTagged("TrafficSignal") do
+				if p:IsA("BasePart") then
+					local lit = if p:GetAttribute("Axis") == "NS" then ns else ew
+					local color = p:GetAttribute("Color")
+					if color == lit then
+						p.Material = Enum.Material.Neon
+						p.Color = Color3.fromHex(T.Colors[lit])
+					else
+						local offMaterial = p:GetAttribute("OffMaterial")
+						local offColor = p:GetAttribute("OffColor")
+						if type(offMaterial) == "string" and type(offColor) == "string" then
+							p.Material = (Enum.Material :: any)[offMaterial]
+							p.Color = Color3.fromHex(offColor)
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
 local function sirenLoop()
 	local S = World.Sounds
 	if #S.Sirens == 0 then
@@ -178,6 +210,7 @@ function AmbienceController:Start()
 	task.spawn(flickerLoop)
 	task.spawn(fireLoop)
 	task.spawn(sirenLoop)
+	task.spawn(trafficLoop)
 end
 
 return AmbienceController

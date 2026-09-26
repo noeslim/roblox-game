@@ -44,17 +44,18 @@ export type Archetype = {
 	h: number,
 	material: string, -- body Enum.Material name
 	colors: { string },
+	texture: string?, -- tileable PBR texture (tools/meshgen/textures.py) applied to the walls
 }
 
 City.Archetypes = {
-	apartment = { w = 40, d = 30, h = 48, material = "Brick", colors = { "#6B3A2E", "#7A4A38", "#5A3A30", "#4F3B34" } },
-	shop = { w = 32, d = 26, h = 24, material = "Brick", colors = { "#5E4A3E", "#3E3A40", "#6A4A3A", "#4A4E52" } },
-	office = { w = 44, d = 40, h = 100, material = "Concrete", colors = { "#5A5E66", "#4A4E56", "#6A6660" } },
-	tower = { w = 40, d = 40, h = 160, material = "Concrete", colors = { "#3E4450", "#4A4E58" } },
-	warehouse = { w = 60, d = 44, h = 26, material = "CorrodedMetal", colors = { "#5A5048", "#4A5058", "#6A5A48" } },
-	chinatown = { w = 28, d = 24, h = 30, material = "Brick", colors = { "#7A2E2A", "#8A5A2E", "#5A2A2E", "#6A3A30" } },
-	mansion = { w = 56, d = 40, h = 22, material = "Plaster", colors = { "#E8E2D6", "#D8D0C0", "#EDE6DA" } },
-	ruin = { w = 44, d = 32, h = 18, material = "Concrete", colors = { "#4A4640", "#55504A" } },
+	apartment = { w = 40, d = 30, h = 48, material = "Brick", texture = "brick_red", colors = { "#6B3A2E", "#7A4A38", "#5A3A30", "#4F3B34" } },
+	shop = { w = 32, d = 26, h = 24, material = "Brick", texture = "brick_dark", colors = { "#5E4A3E", "#3E3A40", "#6A4A3A", "#4A4E52" } },
+	office = { w = 44, d = 40, h = 100, material = "Concrete", texture = "concrete", colors = { "#5A5E66", "#4A4E56", "#6A6660" } },
+	tower = { w = 40, d = 40, h = 160, material = "Concrete", texture = "concrete", colors = { "#3E4450", "#4A4E58" } },
+	warehouse = { w = 60, d = 44, h = 26, material = "CorrodedMetal", texture = "metal_corrugated", colors = { "#5A5048", "#4A5058", "#6A5A48" } },
+	chinatown = { w = 28, d = 24, h = 30, material = "Brick", texture = "brick_red", colors = { "#7A2E2A", "#8A5A2E", "#5A2A2E", "#6A3A30" } },
+	mansion = { w = 56, d = 40, h = 22, material = "Plaster", texture = "plaster", colors = { "#E8E2D6", "#D8D0C0", "#EDE6DA" } },
+	ruin = { w = 44, d = 32, h = 18, material = "Concrete", texture = "concrete", colors = { "#4A4640", "#55504A" } },
 } :: { [string]: Archetype }
 
 -- Which buildings each district uses (weights). Special districts are laid out by hand in CityLayout.
@@ -118,6 +119,29 @@ City.Props = {
 	Hydrants = 30,
 	Benches = 20,
 	TrashCans = 40,
+	-- utility poles and overhead wires along the trap house streets (the hood look)
+	PoleSpacing = 84,
+	PoleHeight = 26, -- the crossarm is 1.5 below the top
+	WireOffsets = { -2.6, -0.9, 2.6 }, -- positions of the wires along the crossarm
+	WireSag = 3,
+	WireWidth = 0.12,
+	-- traffic lights on the corners of the avenue intersections
+	TrafficLights = true,
+	-- rooftop billboards (lit at night)
+	BillboardChance = 0.22, -- per shop / apartment in the districts below
+	BillboardDistricts = { Strip = true, Downtown = true, Chinatown = true, Industrial = true },
+}
+
+-- Text of the rooftop billboards (in-game signage, so in English)
+City.BillboardAds = {
+	{ text = "CASH 4 GOLD", color = "#FFD84A", background = "#1A1A20" },
+	{ text = "NEED A LAWYER? CALL 555-0199", color = "#FFFFFF", background = "#8A1E22" },
+	{ text = "BAIL BONDS 24/7", color = "#111114", background = "#E8C23A" },
+	{ text = "FRESH KICKS - THE STRIP", color = "#FFFFFF", background = "#1E3A8A" },
+	{ text = "QUICK LOANS NO QUESTIONS", color = "#39FF88", background = "#101418" },
+	{ text = "STAY IN SCHOOL", color = "#1A1A20", background = "#E8E2D6" },
+	{ text = "LUCKY DRAGON BUFFET", color = "#FFD84A", background = "#7A1E1E" },
+	{ text = "SEE SOMETHING? SAY NOTHING", color = "#FF3B3B", background = "#111114" },
 }
 
 City.Boundary = {

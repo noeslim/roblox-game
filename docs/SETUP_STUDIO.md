@@ -122,9 +122,21 @@ Les comptoirs, l'établi, le coffre, le canapé, les néons et toutes les pièce
 5. Dans **ReplicatedStorage**, crée un dossier nommé **Assets** (clic droit → Insert Object → Folder), s'il n'existe pas.
 6. Glisse **BlackMarketMeshes** dans **ReplicatedStorage → Assets**. Le nom doit rester exactement `BlackMarketMeshes`.
 7. **File → Save** (ou Publish).
-8. Play : dans Output tu dois voir `[ModelFactory] mesh library loaded: 128 meshes`, et ta planque utilise les nouveaux modèles.
+8. Play : dans Output tu dois voir `[ModelFactory] mesh library loaded: ... meshes`, et ta planque utilise les nouveaux modèles.
 
 Quand Claude met à jour les modèles : supprime l'ancien `BlackMarketMeshes` dans Assets et refais les étapes 1 à 7.
+
+**Textures réalistes (briques, asphalte, bardage, tuiles, pavés...)** : le FBX contient aussi 12 textures PBR
+(couleur + relief + rugosité, aperçu : `assets/previews/textures_sheet.png`), posées sur de petits carrés nommés
+`__swatch__<nom>`. Pour qu'elles soient importées :
+- dans la fenêtre d'import, vérifie que **Import Textures / Materials** est coché (c'est le cas par défaut) ;
+- l'import prend un peu plus de temps (le fichier fait ~12 Mo) : c'est normal.
+
+Au lancement (ou quand tu construis la ville, section 10), le jeu lit ces carrés et crée des **MaterialVariant**
+`BM_<nom>` dans **MaterialService**. Output affiche `[MapBuilder] 12 textures ready`. Toutes les routes, trottoirs,
+façades et maisons les utilisent. Si Output affiche `0 textures`, l'import n'a pas pris les textures : refais
+l'import en cochant les textures. Tu peux régler l'échelle d'une texture dans MaterialService → `BM_<nom>` →
+**StudsPerTile**.
 
 ## 10. Construire la ville dans le place (recommandé, une fois)
 

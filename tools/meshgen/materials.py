@@ -60,5 +60,10 @@ MATERIALS = {
     "chrome": ("Metal", "#C8CCD2", 0.15, 1.0, 0, 0),
     "bark": ("Wood", "#4A3626", 0.9, 0.0, 0, 0),
     "headlight": ("Neon", "#FFF3D6", 0.2, 0.0, 3, 0),
+    "signal_red": ("Glass", "#3A1212", 0.2, 0.0, 0, 0),  # lit by MapBuilder (TrafficSignal tag)
+    "signal_amber": ("Glass", "#3A2A10", 0.2, 0.0, 0, 0),
+    "signal_green": ("Glass", "#103A22", 0.2, 0.0, 0, 0),
+    "billboard_face": ("SmoothPlastic", "#E8E2D6", 0.7, 0.0, 0, 0),  # covered by the ad (SurfaceGui)
+    "wood_pole": ("Wood", "#4A3A2C", 0.95, 0.0, 0, 0),
     "court_paint": ("SmoothPlastic", "#E8E8E8", 0.6, 0.0, 0, 0),
 }

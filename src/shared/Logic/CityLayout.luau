@@ -21,9 +21,11 @@ export type Building = {
 	footprint: Rect,
 }
 export type House = { index: number, x: number, z: number, district: string, lot: Rect }
-export type Prop = { kind: string, x: number, z: number, rot: number, y: number? }
+export type Prop = { kind: string, x: number, z: number, rot: number, y: number?, ad: number? }
 export type Special = { kind: string, x: number, z: number, rot: number, sx: number?, sz: number?, label: string? }
 export type Poi = { name: string, x: number, z: number }
+-- overhead wires between two utility poles (rot = the poles' rotation, the crossarm runs along local Z)
+export type Wire = { x0: number, z0: number, x1: number, z1: number, rot: number }
 export type Layout = {
 	half: number,
 	cells: { { district: string, rect: Rect } },
@@ -35,6 +37,7 @@ export type Layout = {
 	specials: { Special },
 	pois: { Poi },
 	customerSpawns: { Poi },
+	wires: { Wire },
 }
 
 -- Deterministic PRNG (Park-Miller). Random is not available in pure Lune code.
@@ -122,6 +125,7 @@ function CityLayout.Build(cfg: any): Layout
 		specials = {},
 		pois = {},
 		customerSpawns = {},
+		wires = {},
 	}
 
 	local SIDEWALK_TOP = G.SidewalkHeight
@@ -135,12 +139,28 @@ function CityLayout.Build(cfg: any): Layout
 	local function addRoad(kind: string, r: Rect)
 		table.insert(layout.roads, { kind = kind, x0 = r.x0, z0 = r.z0, x1 = r.x1, z1 = r.z1 })
 		slab("road", r, 0, 1)
-		-- yellow center line along the long axis
+		-- markings: double yellow line on avenues, white dashes elsewhere
 		local cx, cz = (r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2
-		if r.x1 - r.x0 > r.z1 - r.z0 then
-			slab("line", rect(r.x0 + 2, cz - 0.25, r.x1 - 2, cz + 0.25), 0.03, 0.06)
+		local horizontal = r.x1 - r.x0 > r.z1 - r.z0
+		if kind == "avenue" then
+			for _, o in { -0.45, 0.45 } do
+				if horizontal then
+					slab("line", rect(r.x0 + 2, cz + o - 0.2, r.x1 - 2, cz + o + 0.2), 0.03, 0.06)
+				else
+					slab("line", rect(cx + o - 0.2, r.z0 + 2, cx + o + 0.2, r.z1 - 2), 0.03, 0.06)
+				end
+			end
 		else
-			slab("line", rect(cx - 0.25, r.z0 + 2, cx + 0.25, r.z1 - 2), 0.03, 0.06)
+			local length = if horizontal then r.x1 - r.x0 else r.z1 - r.z0
+			local t = 4
+			while t + 6 < length - 4 do
+				if horizontal then
+					slab("paint", rect(r.x0 + t, cz - 0.2, r.x0 + t + 6, cz + 0.2), 0.03, 0.06)
+				else
+					slab("paint", rect(cx - 0.2, r.z0 + t, cx + 0.2, r.z0 + t + 6), 0.03, 0.06)
+				end
+				t += 12
+			end
 		end
 	end
 
@@ -370,6 +390,31 @@ function CityLayout.Build(cfg: any): Layout
 				table.insert(layout.props, { kind = "mailbox", x = doorX + 5, z = lot.z1 - 2, rot = 0 })
 				table.insert(layout.props, { kind = "trashcan", x = hx - 20, z = lot.z1 - 3, rot = 0 })
 			end
+			-- utility poles on the back edge of the front sidewalk, wired together
+			local P = cfg.Props
+			local poleZ = frontZ - SW + 1.5
+			local doors = {}
+			for k = 0, H.PerRow - 1 do
+				local lx0 = cell.x0 + SW + k * lotWidth
+				local hx = (lx0 + lotWidth / 2) - (H.Width / 2 - H.Depth / 2)
+				table.insert(doors, hx + H.Depth / 2 + H.StairwellWidth / 2)
+			end
+			local prevX: number? = nil
+			local x = cell.x0 + SW + 6
+			while x <= cell.x1 - SW - 6 do
+				local px = x
+				for _, dx in doors do
+					if math.abs(px - dx) < 5 then
+						px = dx + 5
+					end
+				end
+				table.insert(layout.props, { kind = "utility_pole", x = px, z = poleZ, rot = 0 })
+				if prevX then
+					table.insert(layout.wires, { x0 = prevX, z0 = poleZ, x1 = px, z1 = poleZ, rot = 0 })
+				end
+				prevX = px
+				x += P.PoleSpacing
+			end
 		end
 		for _, corner in { { cell.x0 + 4, cell.z0 + 4 }, { cell.x1 - 4, cell.z0 + 4 }, { cell.x0 + 4, cell.z1 - 4 }, { cell.x1 - 4, cell.z1 - 4 } } do
 			table.insert(layout.customerSpawns, { name = district, x = corner[1], z = corner[2] })
@@ -507,6 +552,36 @@ function CityLayout.Build(cfg: any): Layout
 		end
 	end
 
+	-- zebra crossings on the four sides of every avenue intersection
+	for i = 0, N do
+		for j = 0, N do
+			local ix0 = ox - half + i * (C + A)
+			local iz0 = oz - half + j * (C + A)
+			local function zebra(x0: number, z0: number, x1: number, z1: number, alongX: boolean)
+				if x0 < ox - half or x1 > ox + half or z0 < oz - half or z1 > oz + half then
+					return
+				end
+				if alongX then -- stripes run along x, repeated across z
+					local z = z0 + 2
+					while z + 1.6 <= z1 - 2 do
+						slab("paint", rect(x0, z, x1, z + 1.6), 0.03, 0.06)
+						z += 3.4
+					end
+				else
+					local x = x0 + 2
+					while x + 1.6 <= x1 - 2 do
+						slab("paint", rect(x, z0, x + 1.6, z1), 0.03, 0.06)
+						x += 3.4
+					end
+				end
+			end
+			zebra(ix0 + A + 1, iz0, ix0 + A + 7, iz0 + A, true)
+			zebra(ix0 - 7, iz0, ix0 - 1, iz0 + A, true)
+			zebra(ix0, iz0 + A + 1, ix0 + A, iz0 + A + 7, false)
+			zebra(ix0, iz0 - 7, ix0 + A, iz0 - 1, false)
+		end
+	end
+
 	for row = 1, N do
 		for col = 1, N do
 			local district = cfg.Districts[row][col]
@@ -586,6 +661,38 @@ function CityLayout.Build(cfg: any): Layout
 				if inside(fx, fz) and not onRoad(fx, fz) and onWalkable(fx, fz) then
 					table.insert(layout.props, { kind = kind, x = fx, z = fz, rot = rot })
 				end
+			end
+		end
+	end
+
+	-- Traffic lights on the four corners of every avenue intersection. The mast arm (local +Z) spans
+	-- the approach road, the signal heads face the incoming traffic (local +X).
+	if P.TrafficLights then
+		for i = 0, N do
+			for j = 0, N do
+				local ix0 = ox - half + i * (C + A)
+				local iz0 = oz - half + j * (C + A)
+				local corners = {
+					{ ix0 - 2, iz0 - 2, 90 }, -- NW corner, arm over the north road
+					{ ix0 + A + 2, iz0 - 2, 0 }, -- NE, over the east road
+					{ ix0 + A + 2, iz0 + A + 2, -90 }, -- SE, over the south road
+					{ ix0 - 2, iz0 + A + 2, 180 }, -- SW, over the west road
+				}
+				for _, c in corners do
+					if inside(c[1], c[2]) and not onRoad(c[1], c[2]) and onWalkable(c[1], c[2]) then
+						table.insert(layout.props, { kind = "traffic_light", x = c[1], z = c[2], rot = c[3] })
+					end
+				end
+			end
+		end
+	end
+
+	-- Billboards on the roofs of low buildings
+	for _, b in layout.buildings do
+		local a = cfg.Archetypes[b.archetype]
+		if P.BillboardDistricts[b.district] and (b.archetype == "shop" or b.archetype == "apartment" or b.archetype == "chinatown") then
+			if rng:next() < P.BillboardChance then
+				table.insert(layout.props, { kind = "billboard", x = b.x, z = b.z, rot = b.rot, y = a.h, ad = rng:int(1, #cfg.BillboardAds) })
 			end
 		end
 	end

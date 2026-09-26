@@ -89,6 +89,56 @@ return function(t)
 		end
 	end)
 
+	t.test("utility poles are wired along the trap house streets", function()
+		local poles = {}
+		for _, p in layout.props do
+			if p.kind == "utility_pole" then
+				poles[p.x .. "," .. p.z] = true
+				for _, r in layout.roads do
+					t.falsy(CityLayout.Contains(r, p.x, p.z), "pole on a road")
+				end
+			end
+		end
+		t.truthy(#layout.wires > 0, "no wires")
+		for _, w in layout.wires do
+			t.truthy(poles[w.x0 .. "," .. w.z0] and poles[w.x1 .. "," .. w.z1], "wire not between two poles")
+			local length = math.abs(w.x1 - w.x0) + math.abs(w.z1 - w.z0)
+			t.truthy(length > 20 and length <= City.Props.PoleSpacing + 12, "wire length " .. length)
+		end
+	end)
+
+	t.test("traffic lights stand on the corners of avenue intersections", function()
+		local n = 0
+		for _, p in layout.props do
+			if p.kind == "traffic_light" then
+				n += 1
+				for _, r in layout.roads do
+					t.falsy(CityLayout.Contains(r, p.x, p.z), "traffic light on a road")
+				end
+			end
+		end
+		-- 16 intersections, corners outside the city are skipped
+		t.truthy(n >= 16 and n <= 64, "traffic lights: " .. n)
+	end)
+
+	t.test("billboards sit on building roofs with a valid ad", function()
+		local n = 0
+		for _, p in layout.props do
+			if p.kind == "billboard" then
+				n += 1
+				t.truthy(p.ad and City.BillboardAds[p.ad], "billboard ad")
+				local onRoof = false
+				for _, b in layout.buildings do
+					if b.x == p.x and b.z == p.z and City.Archetypes[b.archetype].h == p.y then
+						onRoof = true
+					end
+				end
+				t.truthy(onRoof, "billboard not on a roof")
+			end
+		end
+		t.truthy(n > 5, "billboards: " .. n)
+	end)
+
 	t.test("war zone has 5 control points and both spawns inside its cell", function()
 		local zone
 		for _, c in layout.cells do

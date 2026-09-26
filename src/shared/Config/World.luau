@@ -39,6 +39,14 @@ return {
 		FlickerSignChance = 0.35, -- part of the neon signs that flicker
 	},
 
+	-- Traffic lights (client side, Logic/TrafficCycle): north-south green, amber, all red, then east-west
+	TrafficLights = {
+		GreenSeconds = 14,
+		AmberSeconds = 3,
+		AllRedSeconds = 1.5,
+		Colors = { signal_red = "#FF3B30", signal_amber = "#FFB020", signal_green = "#39FF88" },
+	},
+
 	-- Ambient sounds: paste ids from the Creator Store (Toolbox > Audio), e.g. "rbxassetid://123".
 	-- Empty = no sound. Search: "city ambience loop", "rain loop", "police siren distant", "dog bark".
 	Sounds = {

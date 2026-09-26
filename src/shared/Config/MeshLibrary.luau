@@ -54,11 +54,14 @@ MeshLibrary.Models = {
 	prop_container = { kind = "prop", offset = { x = 2320.0, y = 0.0, z = -160.0 }, materials = { "container_paint", "metal_dark", "metal_steel" } },
 	prop_smokestack = { kind = "prop", offset = { x = 2460.0, y = 0.0, z = -160.0 }, materials = { "brick_red", "metal_dark" } },
 	prop_lantern = { kind = "prop", offset = { x = 2600.0, y = 0.0, z = -160.0 }, materials = { "metal_black", "neon_red" } },
-	sp_fountain = { kind = "prop", offset = { x = 2740.0, y = 0.0, z = -160.0 }, materials = { "concrete", "water" } },
-	sp_gas_station = { kind = "prop", offset = { x = 2880.0, y = 0.0, z = -160.0 }, materials = { "concrete", "metal_steel", "neon_red", "plaster_white", "plastic_black", "plastic_grey", "screen" } },
-	prop_hoop = { kind = "prop", offset = { x = 3020.0, y = 0.0, z = -160.0 }, materials = { "glass", "metal_dark", "neon_orange" } },
-	sp_control_point = { kind = "prop", offset = { x = 3160.0, y = 0.0, z = -160.0 }, materials = { "concrete", "fabric_dark", "metal_steel", "neon_orange" } },
-	house_shack = { kind = "house", offset = { x = 3300.0, y = 0.0, z = -160.0 }, materials = { "brick_red", "chrome", "concrete", "lamp_lens", "metal_black", "metal_rust", "metal_steel", "plastic_grey", "trim_dark", "trim_light", "window_glass", "window_lit", "wood_dark", "wood_mid" } },
+	prop_utility_pole = { kind = "prop", offset = { x = 2740.0, y = 0.0, z = -160.0 }, materials = { "glass_dark", "metal_dark", "metal_steel", "paper", "plastic_grey", "rubber", "wood_pole" } },
+	prop_traffic_light = { kind = "prop", offset = { x = 2880.0, y = 0.0, z = -160.0 }, materials = { "metal_black", "metal_dark", "paint_green", "signal_amber", "signal_green", "signal_red" } },
+	prop_billboard = { kind = "prop", offset = { x = 3020.0, y = 0.0, z = -160.0 }, materials = { "billboard_face", "concrete", "diamond_plate", "lamp_lens", "metal_black", "metal_dark" } },
+	sp_fountain = { kind = "prop", offset = { x = 3160.0, y = 0.0, z = -160.0 }, materials = { "concrete", "water" } },
+	sp_gas_station = { kind = "prop", offset = { x = 3300.0, y = 0.0, z = -160.0 }, materials = { "concrete", "metal_steel", "neon_red", "plaster_white", "plastic_black", "plastic_grey", "screen" } },
+	prop_hoop = { kind = "prop", offset = { x = 3440.0, y = 0.0, z = -160.0 }, materials = { "glass", "metal_dark", "neon_orange" } },
+	sp_control_point = { kind = "prop", offset = { x = 3580.0, y = 0.0, z = -160.0 }, materials = { "concrete", "fabric_dark", "metal_steel", "neon_orange" } },
+	house_shack = { kind = "house", offset = { x = 3720.0, y = 0.0, z = -160.0 }, materials = { "brick_red", "chrome", "concrete", "lamp_lens", "metal_black", "metal_rust", "metal_steel", "plastic_grey", "trim_dark", "trim_light", "window_glass", "window_lit", "wood_dark", "wood_mid" } },
 } :: { [string]: { kind: string, offset: { x: number, y: number, z: number }, materials: { string } } }
 
 -- material key -> how the MeshPart looks in Roblox
@@ -118,7 +121,29 @@ MeshLibrary.Materials = {
 	chrome = { material = "Metal", color = "#C8CCD2", transparency = 0 },
 	bark = { material = "Wood", color = "#4A3626", transparency = 0 },
 	headlight = { material = "Neon", color = "#FFF3D6", transparency = 0 },
+	signal_red = { material = "Glass", color = "#3A1212", transparency = 0 },
+	signal_amber = { material = "Glass", color = "#3A2A10", transparency = 0 },
+	signal_green = { material = "Glass", color = "#103A22", transparency = 0 },
+	billboard_face = { material = "SmoothPlastic", color = "#E8E2D6", transparency = 0 },
+	wood_pole = { material = "Wood", color = "#4A3A2C", transparency = 0 },
 	court_paint = { material = "SmoothPlastic", color = "#E8E8E8", transparency = 0 },
 } :: { [string]: { material: string, color: string, transparency: number } }
+
+-- tileable PBR textures (tools/meshgen/textures.py), carried by the "__swatch__<name>" meshes;
+-- MapBuilder turns each into a MaterialVariant "BM_<name>"
+MeshLibrary.Textures = {
+	asphalt = { baseMaterial = "Asphalt", studsPerTile = 14 },
+	sidewalk = { baseMaterial = "Pavement", studsPerTile = 8 },
+	brick_red = { baseMaterial = "Brick", studsPerTile = 8 },
+	brick_dark = { baseMaterial = "Brick", studsPerTile = 8 },
+	concrete = { baseMaterial = "Concrete", studsPerTile = 12 },
+	plaster = { baseMaterial = "Plaster", studsPerTile = 8 },
+	siding = { baseMaterial = "WoodPlanks", studsPerTile = 8 },
+	shingles = { baseMaterial = "RoofShingles", studsPerTile = 8 },
+	metal_corrugated = { baseMaterial = "CorrodedMetal", studsPerTile = 10 },
+	cobblestone = { baseMaterial = "Cobblestone", studsPerTile = 8 },
+	dirt = { baseMaterial = "Ground", studsPerTile = 14 },
+	planks = { baseMaterial = "WoodPlanks", studsPerTile = 8 },
+} :: { [string]: { baseMaterial: string, studsPerTile: number } }
 
 return MeshLibrary

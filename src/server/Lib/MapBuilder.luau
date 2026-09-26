@@ -25,6 +25,7 @@ local World = require(Shared.Config.World)
 local CityLayout = require(Shared.Logic.CityLayout)
 local CityParts = require(Shared.Logic.CityParts)
 local ModelFactory = require(Shared.Visual.ModelFactory)
+local MeshLibrary = require(Shared.Config.MeshLibrary)
 
 local MapBuilder = {}
 
@@ -33,7 +34,7 @@ local CONTAINER_COLORS = { "#8A3A2A", "#2A4A7A", "#2E5A3A", "#B06A2A", "#5A5A5E"
 local AWNING_COLORS = { "#7A1E2A", "#1E4A2A", "#1E2E5A", "#5A3A1E", "#2A2A2E" }
 local SIGN_COLORS = { "#FF3FA4", "#3FA9F5", "#39FF88", "#FFB020", "#B45CFF", "#FF3B3B" }
 local SPECIAL_SIGN_COLORS = { POLICE = "#3FA9F5", BANK = "#39FF88", SUPPLIER = "#FFB020", BAR = "#FF3FA4" }
-local COLLIDING_PROPS = { lamp = true, car = true, container = true, barrier = true, bench = true, trashcan = true, hydrant = true, mailbox = true, smokestack = true }
+local COLLIDING_PROPS = { utility_pole = true, traffic_light = true, billboard = true, lamp = true, car = true, container = true, barrier = true, bench = true, trashcan = true, hydrant = true, mailbox = true, smokestack = true }
 
 local function hex(s: string): Color3
 	return Color3.fromHex(s)
@@ -51,6 +52,75 @@ local function folder(name: string, parent: Instance): Folder
 	f.Name = name
 	f.Parent = parent
 	return f
+end
+
+-- texture name -> MaterialVariant name, filled by setupTextureVariants()
+local textureVariants: { [string]: string } = {}
+local TEXTURE_TINT = 0.6 -- textured parts: color blended this much towards white (the texture has the color)
+
+local function readMap(from: Instance, prop: string): any
+	local ok, value = pcall(function()
+		return (from :: any)[prop]
+	end)
+	return if ok then value else nil
+end
+
+local function writeMap(to: Instance, prop: string, value: any): boolean
+	if value == nil or value == "" then
+		return false
+	end
+	return (pcall(function()
+		(to :: any)[prop] = value
+	end))
+end
+
+-- The imported library carries one "__swatch__<name>" mesh per texture, whose SurfaceAppearance holds
+-- the uploaded PBR maps. Each becomes a MaterialVariant "BM_<name>" in MaterialService.
+local function setupTextureVariants(): number
+	table.clear(textureVariants)
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local library = assets and assets:FindFirstChild("BlackMarketMeshes")
+	if library == nil then
+		return 0
+	end
+	local count = 0
+	for name, info in MeshLibrary.Textures do
+		local swatch = library:FindFirstChild("__swatch__" .. name, true)
+		if swatch and swatch:IsA("MeshPart") then
+			local sa = swatch:FindFirstChildOfClass("SurfaceAppearance")
+			local variantName = "BM_" .. name
+			local old = MaterialService:FindFirstChild(variantName)
+			if old then
+				old:Destroy()
+			end
+			local variant = Instance.new("MaterialVariant")
+			variant.Name = variantName
+			variant.BaseMaterial = material(info.baseMaterial)
+			variant.StudsPerTile = info.studsPerTile
+			local ok = false
+			if sa then
+				for _, map in { "ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap" } do
+					-- older and newer (Content) property names
+					local done = writeMap(variant, map, readMap(sa, map))
+					if not done then
+						done = writeMap(variant, map .. "Content", readMap(sa, map .. "Content"))
+					end
+					ok = ok or (done and map == "ColorMap")
+				end
+			end
+			if not ok then
+				ok = writeMap(variant, "ColorMap", readMap(swatch, "TextureID"))
+			end
+			if ok then
+				variant.Parent = MaterialService
+				textureVariants[name] = variantName
+				count += 1
+			else
+				variant:Destroy()
+			end
+		end
+	end
+	return count
 end
 
 local function makePart(spec: CityParts.PartSpec, parent: Instance, base: CFrame): BasePart
@@ -75,6 +145,12 @@ local function makePart(spec: CityParts.PartSpec, parent: Instance, base: CFrame
 		* CFrame.Angles(0, 0, math.rad(spec.rotZ or 0))
 	p.Material = material(spec.material)
 	p.Color = hex(spec.color)
+	local variant = spec.texture and textureVariants[spec.texture]
+	if variant then
+		p.Material = material(MeshLibrary.Textures[spec.texture :: string].baseMaterial)
+		p.MaterialVariant = variant
+		p.Color = p.Color:Lerp(Color3.new(1, 1, 1), TEXTURE_TINT)
+	end
 	p.Transparency = spec.transparency or 0
 	p.CanCollide = spec.canCollide ~= false
 	p.CanTouch = false
@@ -348,7 +424,53 @@ local function buildHouse(h: CityLayout.House, hideouts: Instance, origin: CFram
 	plot.Parent = hideouts
 end
 
-local function buildProp(p: CityLayout.Prop, parent: Instance, origin: CFrame, sidewalkTop: number, rng: Random)
+-- Traffic lights: the signals of the north-south roads show green, the east-west ones red.
+-- Tagged TrafficSignal (attributes Color / Axis) so a controller can cycle them later.
+local SIGNAL_COLORS: { [string]: string } = World.TrafficLights.Colors
+
+local function lightSignals(parts: { MeshPart }, rot: number)
+	local axis = if math.abs(rot) == 90 then "NS" else "EW"
+	local lit = if axis == "NS" then "signal_green" else "signal_red"
+	for _, p in parts do
+		local m = p:GetAttribute("MeshMaterial")
+		if type(m) == "string" and SIGNAL_COLORS[m] then
+			p:SetAttribute("Color", m)
+			p:SetAttribute("Axis", axis)
+			p:SetAttribute("OffMaterial", p.Material.Name)
+			p:SetAttribute("OffColor", "#" .. p.Color:ToHex())
+			CollectionService:AddTag(p, "TrafficSignal")
+			if m == lit then
+				p.Material = Enum.Material.Neon
+				p.Color = hex(SIGNAL_COLORS[m])
+			end
+		end
+	end
+end
+
+local function addPropExtras(p: CityLayout.Prop, model: Model, cf: CFrame)
+	for _, spec in CityParts.PropExtras(p.kind) do
+		local part = makePart(spec, model, cf)
+		if spec.name == "AdFace" then
+			local ad = City.BillboardAds[p.ad or 1] or City.BillboardAds[1]
+			part.Color = hex(ad.background)
+			surfaceText(part, Enum.NormalId.Back, ad.text, ad.color, Enum.Font.GothamBlack)
+			local gui = part:FindFirstChildOfClass("SurfaceGui")
+			if gui then
+				gui.Brightness = 1.2
+				local label = gui:FindFirstChild("SignText") :: TextLabel?
+				if label then
+					label.BackgroundTransparency = 0
+					label.BackgroundColor3 = hex(ad.background)
+					label.Size = UDim2.fromScale(0.94, 0.8)
+					label.Position = UDim2.fromScale(0.03, 0.1)
+					gui.ClipsDescendants = true
+				end
+			end
+		end
+	end
+end
+
+local function buildProp(p: CityLayout.Prop, parent: Instance, origin: CFrame, sidewalkTop: number, rng: Random): Model
 	local ground = if p.kind == "car" then 0 else sidewalkTop
 	local cf = origin * CFrame.new(p.x, ground + (p.y or 0), p.z) * CFrame.Angles(0, math.rad(p.rot), 0)
 	local model = Instance.new("Model")
@@ -357,7 +479,7 @@ local function buildProp(p: CityLayout.Prop, parent: Instance, origin: CFrame, s
 	if prefab then
 		placePrefab(prefab, model, cf)
 		model.Parent = parent
-		return
+		return model
 	end
 	local meshes = ModelFactory.PlaceLibraryModel("prop_" .. p.kind, model, cf, COLLIDING_PROPS[p.kind] == true)
 	if #meshes == 0 then
@@ -379,9 +501,56 @@ local function buildProp(p: CityLayout.Prop, parent: Instance, origin: CFrame, s
 			if lens then
 				streetLight(lens)
 			end
+		elseif p.kind == "traffic_light" then
+			lightSignals(meshes, p.rot)
 		end
 	end
+	addPropExtras(p, model, cf)
 	model.Parent = parent
+	return model
+end
+
+-- Overhead wires: a sagging Beam per wire between the crossarms of two poles (no parts, no collisions).
+local function buildWires(layout: CityLayout.Layout, poles: { [string]: Model }, origin: CFrame, sidewalkTop: number)
+	local P = City.Props
+	local armY = P.PoleHeight - 1.5 + 0.55
+	local down = Vector3.new(0, -1, 0)
+	for _, w in layout.wires do
+		local a, b = poles[w.x0 .. "," .. w.z0], poles[w.x1 .. "," .. w.z1]
+		local holderA = a and a:FindFirstChildWhichIsA("BasePart")
+		local holderB = b and b:FindFirstChildWhichIsA("BasePart")
+		if holderA and holderB then
+			local rot = CFrame.Angles(0, math.rad(w.rot), 0)
+			local cfA = origin * CFrame.new(w.x0, sidewalkTop, w.z0) * rot
+			local cfB = origin * CFrame.new(w.x1, sidewalkTop, w.z1) * rot
+			for _, offset in P.WireOffsets do
+				local pa = (cfA * CFrame.new(0, armY, offset)).Position
+				local pb = (cfB * CFrame.new(0, armY, offset)).Position
+				local along = (pb - pa).Unit
+				local att0 = Instance.new("Attachment")
+				att0.Name = "Wire"
+				att0.Parent = holderA
+				att0.WorldCFrame = CFrame.fromMatrix(pa, down, along) -- X axis points down: the curve sags
+				local att1 = Instance.new("Attachment")
+				att1.Name = "Wire"
+				att1.Parent = holderB
+				att1.WorldCFrame = CFrame.fromMatrix(pb, down, along)
+				local beam = Instance.new("Beam")
+				beam.Attachment0 = att0
+				beam.Attachment1 = att1
+				beam.CurveSize0 = P.WireSag
+				beam.CurveSize1 = -P.WireSag
+				beam.Width0 = P.WireWidth
+				beam.Width1 = P.WireWidth
+				beam.Segments = 12
+				beam.FaceCamera = true
+				beam.Color = ColorSequence.new(hex("#141416"))
+				beam.LightInfluence = 1
+				beam.Transparency = NumberSequence.new(0)
+				beam.Parent = holderA
+			end
+		end
+	end
 end
 
 local function buildSpecial(s: CityLayout.Special, parent: Instance, origin: CFrame, sidewalkTop: number, rng: Random)
@@ -506,6 +675,8 @@ end
 
 function MapBuilder.Build(): (Instance, Instance)
 	local started = os.clock()
+	local textures = setupTextureVariants()
+	print(("[MapBuilder] %d textures ready"):format(textures))
 	local layout = CityLayout.Build(City)
 	local origin = CFrame.new(City.Origin.x, City.Origin.y, City.Origin.z)
 	local sidewalkTop = City.Grid.SidewalkHeight
@@ -541,9 +712,14 @@ function MapBuilder.Build(): (Instance, Instance)
 	for _, b in layout.buildings do
 		buildBuilding(b, buildings, origin, sidewalkTop, rng)
 	end
+	local poles: { [string]: Model } = {}
 	for _, p in layout.props do
-		buildProp(p, props, origin, sidewalkTop, rng)
+		local model = buildProp(p, props, origin, sidewalkTop, rng)
+		if p.kind == "utility_pole" then
+			poles[p.x .. "," .. p.z] = model
+		end
 	end
+	buildWires(layout, poles, origin, sidewalkTop)
 	for _, s in layout.specials do
 		buildSpecial(s, specials, origin, sidewalkTop, rng)
 	end

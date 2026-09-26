@@ -411,6 +411,71 @@ def prop_lantern():
     lathe([(0.2, -0.9), (0.7, -0.6), (0.8, 0), (0.7, 0.6), (0.2, 0.9)], (0, 0, 0), "neon_red", verts=12)
 
 
+@city_asset
+def prop_utility_pole():
+    """Wooden pole, crossarm along Z (the wires run along X), insulators where the wires hang
+    (City.Props.WireOffsets), transformer can and a few cable ties."""
+    H = CITY["Props"]["PoleHeight"]
+    lathe([(0.55, 0), (0.5, 1), (0.36, H - 0.2), (0.0, H)], (0, 0, 0), "wood_pole", verts=12)
+    arm_y = H - 1.5
+    box((0.45, 0.5, 7.0), (0, arm_y, 0), "wood_pole", bev=0.05, segs=1)
+    for z in (-2.2, 2.2):
+        tube([(0, arm_y - 0.2, z * 0.2), (0, arm_y - 2.4, z * 0.02)], 0.06, "metal_dark", verts=6)
+    for z in CITY["Props"]["WireOffsets"]:
+        cyl(0.14, 0.3, (0, arm_y + 0.4, z), "glass_dark", bev=0.02, verts=10)
+        cyl(0.2, 0.08, (0, arm_y + 0.3, z), "glass_dark", bev=0, verts=10)
+    # transformer
+    cyl(0.9, 2.6, (0.95, arm_y - 4.5, 0), "plastic_grey", bev=0.15, verts=16)
+    box((0.3, 0.8, 0.6), (0.55, arm_y - 4.0, 0), "metal_dark", bev=0.05, segs=1)
+    tube([(0.95, arm_y - 3.1, 0), (0.6, arm_y - 1.6, 0.4), (0, arm_y + 0.5, CITY["Props"]["WireOffsets"][1])], 0.05, "rubber", verts=6)
+    # staples, tag, climbing steps
+    for y in (3.5, 4.8, 6.1, 7.4, 8.7):
+        box((0.12, 0.12, 0.9), (0.42 if int(y * 10) % 2 else -0.42, y, 0), "metal_steel", bev=0, segs=1)
+    box((0.02, 0.5, 0.35), (0.5, 7.5, 0), "paper", bev=0, segs=1)
+
+
+@city_asset
+def prop_traffic_light():
+    """Pole on a corner, mast arm along +Z over the road, three heads facing +X."""
+    lathe([(0.7, 0), (0.6, 0.5), (0.35, 1.0), (0.32, 19.5), (0.0, 19.8)], (0, 0, 0), "metal_dark", verts=16)
+    tube([(0, 18.5, 0), (0, 18.7, 7), (0, 18.9, 15)], 0.2, "metal_dark", verts=10)
+    tube([(0, 15.5, 0), (0, 18.3, 5)], 0.08, "metal_dark", verts=6)
+    for z in (6.0, 10.5, 14.5):
+        box((1.2, 4.2, 1.5), (0, 16.3, z), "metal_black", bev=0.15, segs=2)
+        for i, mat in enumerate(("signal_red", "signal_amber", "signal_green")):
+            y = 17.6 - i * 1.3
+            cyl(0.45, 0.1, (0.62, y, z), mat, axis="x", bev=0, verts=16)
+            box((0.6, 0.12, 1.1), (0.9, y + 0.55, z), "metal_black", bev=0, segs=1)  # visor
+        tube([(0, 18.5, z), (0, 18.4, z)], 0.05, "metal_dark", verts=6)
+    # pedestrian box and push button
+    box((0.9, 1.4, 1.2), (0.6, 10.5, 0), "metal_black", bev=0.1, segs=1)
+    box((0.1, 0.9, 0.8), (1.08, 10.5, 0), "signal_amber", bev=0, segs=1)
+    box((0.4, 0.6, 0.35), (0.45, 3.6, 0), "paint_green", bev=0.05, segs=1)
+    box((0.02, 1.4, 3.6), (-0.36, 12.8, 0), "paint_green", bev=0, segs=1)  # street name plate
+
+
+@city_asset
+def prop_billboard():
+    """Rooftop billboard facing +Z: two steel legs, lattice, board (the ad is a SurfaceGui added
+    by MapBuilder in front of the board) and three lamps on arms."""
+    W, Hb, y0 = 28.0, 12.0, 8.0
+    for x in (-W / 3, W / 3):
+        box((0.9, y0 + Hb, 0.9), (x, (y0 + Hb) / 2, -0.8), "metal_dark", bev=0.05, segs=1)
+        tube([(x, 0.2, -4), (x, y0, -0.9)], 0.18, "metal_dark", verts=8)
+        box((1.6, 0.3, 1.6), (x, 0.15, -0.8), "concrete", bev=0.05, segs=1)
+    for y in (2.5, 5.5):
+        box((W * 0.7, 0.3, 0.3), (0, y, -0.8), "metal_dark", bev=0, segs=1)
+    box((W + 0.8, Hb + 0.8, 0.5), (0, y0 + Hb / 2, 0), "metal_black", bev=0.08, segs=1)
+    box((W, Hb, 0.2), (0, y0 + Hb / 2, 0.3), "billboard_face", bev=0, segs=1)
+    box((W + 1, 0.2, 2.2), (0, y0 - 0.5, 0.8), "diamond_plate", bev=0, segs=1)  # catwalk
+    for x in (-W / 2 + 0.2, W / 2 - 0.2):
+        tube([(x, y0 - 0.4, 1.8), (x, y0 + 0.6, 1.8)], 0.05, "metal_dark", verts=6)
+    for x in (-W / 3, 0, W / 3):
+        tube([(x, y0 + Hb + 0.4, 0), (x, y0 + Hb + 1.2, 2.2), (x, y0 + Hb + 1.0, 3.6)], 0.09, "metal_dark", verts=6)
+        box((1.4, 0.6, 1.0), (x, y0 + Hb + 0.8, 3.8), "metal_dark", bev=0.1, segs=1, rot=(-25, 0, 0))
+        box((1.1, 0.1, 0.7), (x, y0 + Hb + 0.45, 3.8), "lamp_lens", bev=0, segs=1, rot=(-25, 0, 0))
+
+
 # Specials ------------------------------------------------------------------------------------------------
 
 @city_asset

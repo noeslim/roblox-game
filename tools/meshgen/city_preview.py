@@ -99,23 +99,40 @@ def roblox_matrix(x, y, z, rot_y=0.0, rot_z=0.0):
     return Matrix.Translation(rb((x, y, z))) @ Matrix.Rotation(math.radians(rot_y), 4, "Z") @ Matrix.Rotation(math.radians(-rot_z), 4, "Y")
 
 
+_tex_cache = {}
+
+
+def textured(name):
+    if name not in _tex_cache:
+        from textures import TEXTURES
+
+        _tex_cache[name] = build.texture_material(name, mapping=TEXTURES[name][2])
+    return _tex_cache[name]
+
+
 def make_part(spec, base, collection, hidden=False):
     if spec.get("transparency", 0) >= 1 or hidden:
         return None
     shape = spec["shape"]
-    me = wedge_mesh() if shape == "Wedge" else unit_mesh(shape)
-    ob = bpy.data.objects.new(spec["name"], me)
     size = spec["size"]
-    ob.matrix_world = (
-        base
-        @ roblox_matrix(spec["pos"]["x"], spec["pos"]["y"], spec["pos"]["z"], spec.get("rotY", 0), spec.get("rotZ", 0))
-        @ Matrix.Diagonal((size["x"], size["z"], size["y"], 1.0))
-    )
-    ob.material_slots  # noqa: B018
-    ob.data = me
-    ob.active_material = part_material(spec["material"], spec["color"])
-    ob.material_slots[0].link = "OBJECT"
-    ob.material_slots[0].material = part_material(spec["material"], spec["color"])
+    place = base @ roblox_matrix(spec["pos"]["x"], spec["pos"]["y"], spec["pos"]["z"], spec.get("rotY", 0), spec.get("rotZ", 0))
+    scale = Matrix.Diagonal((size["x"], size["z"], size["y"], 1.0))
+    tex = spec.get("texture")
+    unit = wedge_mesh() if shape == "Wedge" else unit_mesh(shape)
+    if tex:
+        # own mesh at real size, so object coordinates are studs (like Roblox tiling)
+        me = unit.copy()
+        me.transform(scale)
+        me.materials.clear()  # the shared unit mesh may carry a material from an earlier part
+        ob = bpy.data.objects.new(spec["name"], me)
+        ob.matrix_world = place
+        me.materials.append(textured(tex))
+    else:
+        ob = bpy.data.objects.new(spec["name"], unit)
+        ob.matrix_world = place @ scale
+        ob.active_material = part_material(spec["material"], spec["color"])
+        ob.material_slots[0].link = "OBJECT"
+        ob.material_slots[0].material = part_material(spec["material"], spec["color"])
     collection.objects.link(ob)
     return ob
 
@@ -142,6 +159,33 @@ def place_asset(name, base, offsets, collection):
         collection.objects.link(inst)
 
 
+def build_wires(col, side):
+    """Sagging overhead wires between utility poles (Beams in the game)."""
+    P = CFG["Props"]
+    arm_y = P["PoleHeight"] - 1.5 + 0.55
+    mat = part_material("Rubber", "#141416")
+    for w in LAYOUT.get("wires", []):
+        rot = Matrix.Rotation(math.radians(w["rot"]), 4, "Z")
+        for off in P["WireOffsets"]:
+            a = Matrix.Translation(rb((w["x0"], side, w["z0"]))) @ rot @ rb((0, arm_y, off))
+            b = Matrix.Translation(rb((w["x1"], side, w["z1"]))) @ rot @ rb((0, arm_y, off))
+            curve = bpy.data.curves.new("wire", "CURVE")
+            curve.dimensions = "3D"
+            curve.bevel_depth = P["WireWidth"] / 2
+            curve.bevel_resolution = 1
+            spline = curve.splines.new("POLY")
+            n = 12
+            spline.points.add(n)
+            for i in range(n + 1):
+                t = i / n
+                pt = a.lerp(b, t)
+                pt.z -= P["WireSag"] * 3 * t * (1 - t)  # the Beam's bezier sag
+                spline.points[i].co = (pt.x, pt.y, pt.z, 1)
+            ob = bpy.data.objects.new("Wire", curve)
+            ob.data.materials.append(mat)
+            col.objects.link(ob)
+
+
 def build_city(offsets):
     col = bpy.data.collections.new("City")
     bpy.context.scene.collection.children.link(col)
@@ -153,7 +197,7 @@ def build_city(offsets):
     for b in LAYOUT["buildings"]:
         a = CFG["Archetypes"][b["archetype"]]
         base = roblox_matrix(b["x"], side, b["z"], b["rot"])
-        make_part({"name": "Body", "shape": "Block", "size": {"x": a["w"], "y": a["h"], "z": a["d"]}, "pos": {"x": 0, "y": a["h"] / 2, "z": 0}, "material": a["material"], "color": b["color"]}, base, col)
+        make_part({"name": "Body", "shape": "Block", "size": {"x": a["w"], "y": a["h"], "z": a["d"]}, "pos": {"x": 0, "y": a["h"] / 2, "z": 0}, "material": a["material"], "color": b["color"], "texture": a.get("texture")}, base, col)
         place_asset("bld_" + b["archetype"], base, offsets, col)
         if b.get("sign"):
             make_part({"name": "Sign", "shape": "Block", "size": {"x": min(a["w"] * 0.6, 18), "y": 3, "z": 0.4}, "pos": {"x": 0, "y": 12, "z": a["d"] / 2 + 0.7}, "material": "Neon", "color": "#FF3FA4"}, base, col)
@@ -165,7 +209,12 @@ def build_city(offsets):
         place_asset("house_shack", base, offsets, col)
     for p in LAYOUT["props"]:
         ground = 0 if p["kind"] == "car" else side
-        place_asset("prop_" + p["kind"], roblox_matrix(p["x"], ground + p.get("y", 0), p["z"], p["rot"]), offsets, col)
+        base = roblox_matrix(p["x"], ground + p.get("y", 0), p["z"], p["rot"])
+        place_asset("prop_" + p["kind"], base, offsets, col)
+        if p["kind"] == "billboard":  # the ad is a SurfaceGui in the game: a flat color here
+            ad = CFG["BillboardAds"][p.get("ad", 1) - 1]
+            make_part({"name": "AdFace", "shape": "Block", "size": {"x": 28, "y": 12, "z": 0.1}, "pos": {"x": 0, "y": 14, "z": 0.45}, "material": "Neon", "color": ad["background"]}, base, col)
+    build_wires(col, side)
     meshes = {"fountain": "sp_fountain", "gas_station": "sp_gas_station", "control_point": "sp_control_point"}
     for s, parts in zip(LAYOUT["specials"], DATA["specialParts"]):
         if s["kind"] == "sea":
@@ -191,14 +240,23 @@ def setup_render():
     world = bpy.data.worlds.new("World")
     world.use_nodes = True
     bg = world.node_tree.nodes["Background"]
-    bg.inputs["Color"].default_value = (0.42, 0.5, 0.65, 1)
-    bg.inputs["Strength"].default_value = 0.8
+    try:  # physical sky, late afternoon
+        sky = world.node_tree.nodes.new("ShaderNodeTexSky")
+        sky.sky_type = "NISHITA"
+        sky.sun_disc = False  # the Sun lamp is the sun
+        sky.sun_elevation = math.radians(28)
+        sky.sun_rotation = math.radians(215)
+        world.node_tree.links.new(sky.outputs["Color"], bg.inputs["Color"])
+        bg.inputs["Strength"].default_value = 0.2
+    except Exception:
+        bg.inputs["Color"].default_value = (0.42, 0.5, 0.65, 1)
+        bg.inputs["Strength"].default_value = 0.8
     scene.world = world
     sun_data = bpy.data.lights.new("Sun", "SUN")
     sun_data.energy = 3.5
     sun_data.angle = math.radians(3)
     sun = bpy.data.objects.new("Sun", sun_data)
-    sun.rotation_euler = (math.radians(50), math.radians(10), math.radians(35))
+    sun.rotation_euler = (math.radians(62), math.radians(0), math.radians(215))
     scene.collection.objects.link(sun)
     cam_data = bpy.data.cameras.new("Cam")
     cam_data.clip_end = 6000

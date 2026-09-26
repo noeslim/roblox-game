@@ -23,6 +23,8 @@ import lib  # noqa: E402
 from assets import BUILDABLES, WEAPON_PARTS  # noqa: E402
 from city_assets import CITY_ASSETS  # noqa: E402
 from materials import MATERIALS  # noqa: E402
+from textures import OUT as TEXTURE_DIR  # noqa: E402
+from textures import TEXTURES  # noqa: E402
 
 FBX_PATH = os.path.join(ROOT, "assets", "BlackMarketMeshes.fbx")
 LUAU_PATH = os.path.join(ROOT, "src", "shared", "Config", "MeshLibrary.luau")
@@ -133,7 +135,53 @@ def make_library():
     anchor = bpy.context.view_layer.objects.active
     anchor.name = "__origin__"
     anchor.data.materials.append(mats["plastic_grey"])
+    make_swatches()
     return layout, groups, stats, mats
+
+
+def texture_material(name, mapping=None):
+    """Principled material with the PBR maps of a texture (what Studio's importer reads).
+    mapping: optional (studs_per_tile) -> world-space box projection, for the city preview."""
+    m = bpy.data.materials.new("tex_" + name + ("_world" if mapping else ""))
+    m.use_nodes = True
+    nodes, links = m.node_tree.nodes, m.node_tree.links
+    bsdf = nodes["Principled BSDF"]
+    vector = None
+    if mapping:
+        coord = nodes.new("ShaderNodeTexCoord")
+        mp = nodes.new("ShaderNodeMapping")
+        mp.inputs["Scale"].default_value = (1 / mapping, 1 / mapping, 1 / mapping)
+        links.new(coord.outputs["Object" if mapping < 0 else "Object"], mp.inputs["Vector"])
+        vector = mp.outputs["Vector"]
+
+    def image(kind, non_color):
+        node = nodes.new("ShaderNodeTexImage")
+        node.image = bpy.data.images.load(os.path.join(TEXTURE_DIR, f"{name}_{kind}.png"), check_existing=True)
+        if non_color:
+            node.image.colorspace_settings.name = "Non-Color"
+        if vector is not None:
+            node.projection = "BOX"
+            node.projection_blend = 0.15
+            links.new(vector, node.inputs["Vector"])
+        return node
+
+    links.new(image("color", False).outputs["Color"], bsdf.inputs["Base Color"])
+    links.new(image("roughness", True).outputs["Color"], bsdf.inputs["Roughness"])
+    nmap = nodes.new("ShaderNodeNormalMap")
+    links.new(image("normal", True).outputs["Color"], nmap.inputs["Color"])
+    links.new(nmap.outputs["Normal"], bsdf.inputs["Normal"])
+    return m
+
+
+def make_swatches():
+    """One 4x4 stud textured plane per texture. Studio uploads the maps on import and creates a
+    SurfaceAppearance; MapBuilder turns it into a MaterialVariant for the whole city."""
+    for i, name in enumerate(TEXTURES):
+        bpy.ops.mesh.primitive_plane_add(size=4.0, location=lib.rb((i * 6.0, 0.0, -40.0)))
+        ob = bpy.context.view_layer.objects.active
+        ob.name = "__swatch__" + name
+        ob.data.name = ob.name
+        ob.data.materials.append(texture_material(name))
 
 
 def export(layout, groups, stats):
@@ -151,7 +199,8 @@ def export(layout, groups, stats):
         mesh_smooth_type="OFF",
         use_mesh_modifiers=True,
         add_leaf_bones=False,
-        path_mode="STRIP",
+        path_mode="COPY",  # Roblox: Path Mode = Copy + Embed Textures
+        embed_textures=True,
     )
     write_luau(layout, groups.keys())
     total = sum(stats.values())
@@ -192,6 +241,15 @@ def write_luau(layout, group_keys):
         lines.append(f"\t{key} = {{ material = {lua_str(rbx_mat)}, color = {lua_str(color)}, transparency = {transparency} }},")
     lines += [
         "} :: { [string]: { material: string, color: string, transparency: number } }",
+        "",
+        "-- tileable PBR textures (tools/meshgen/textures.py), carried by the \"__swatch__<name>\" meshes;",
+        "-- MapBuilder turns each into a MaterialVariant \"BM_<name>\"",
+        "MeshLibrary.Textures = {",
+    ]
+    for name, (_fn, base, studs) in TEXTURES.items():
+        lines.append(f"\t{name} = {{ baseMaterial = {lua_str(base)}, studsPerTile = {studs} }},")
+    lines += [
+        "} :: { [string]: { baseMaterial: string, studsPerTile: number } }",
         "",
         "return MeshLibrary",
         "",
