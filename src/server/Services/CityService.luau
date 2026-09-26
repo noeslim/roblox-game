@@ -23,7 +23,8 @@ end
 local function setGlow(p: BasePart, night: boolean)
 	if night then
 		p.Material = Enum.Material.Neon
-		local c = p:GetAttribute("NightColor")
+		local mesh = p:GetAttribute("MeshMaterial")
+		local c = if mesh == "window_lit" then World.Lighting.NightWindowColor elseif mesh == "lamp_lens" then World.Lighting.NightLampColor else p:GetAttribute("NightColor")
 		if type(c) == "string" then
 			p.Color = hex(c)
 		end
@@ -64,13 +65,26 @@ end
 
 local function setupLighting()
 	local L = World.Lighting
-	-- only one Atmosphere can be active: the Baseplate template ships a brownish one, set it aside
-	-- for this play session (nothing is saved, your place file keeps it)
+	-- The place's own Sky, Atmosphere and post effects (Baseplate template, plugins, free models...)
+	-- stack with ours and tint the city (red nights). Set them aside for this play session: nothing is
+	-- saved, the place file keeps them. Everything we control is named BM_*.
 	for _, child in Lighting:GetChildren() do
-		if child:IsA("Atmosphere") and child.Name ~= "BM_Atmosphere" then
+		local ours = string.sub(child.Name, 1, 3) == "BM_"
+		if not ours and (child:IsA("Atmosphere") or child:IsA("Sky") or child:IsA("PostEffect")) then
+			print(("[CityService] set aside Lighting.%s (%s)"):format(child.Name, child.ClassName))
 			child.Parent = nil
 		end
 	end
+	local sky = ensureEffect("Sky", "BM_Sky") :: Sky -- default Roblox sky textures
+	sky.StarCount = L.Sky.StarCount
+	sky.SunAngularSize = L.Sky.SunAngularSize
+	sky.MoonAngularSize = L.Sky.MoonAngularSize
+	sky.CelestialBodiesShown = true
+	Lighting.ColorShift_Top = Color3.new(0, 0, 0)
+	Lighting.ColorShift_Bottom = Color3.new(0, 0, 0)
+	Lighting.FogStart = 0
+	Lighting.FogEnd = 100000
+	print(("[CityService] lighting: technology %s"):format(Lighting.Technology.Name))
 	local atmosphere = ensureEffect("Atmosphere", "BM_Atmosphere") :: Atmosphere
 	atmosphere.Density = L.Atmosphere.Density
 	atmosphere.Haze = L.Atmosphere.Haze

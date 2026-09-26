@@ -82,7 +82,9 @@ local function loadLibrary(): { [string]: { MeshTemplate } }?
 			end
 		end
 	end
-	print(("[ModelFactory] mesh library loaded: %d meshes"):format(count))
+	-- scale and rotation of the import: helps diagnosing a misaligned library (should be 1 and 0,0,0)
+	local o = anchor.Orientation
+	print(("[ModelFactory] mesh library loaded: %d meshes (origin size %.3f, rotation %d,%d,%d)"):format(count, anchor.Size.X, o.X, o.Y, o.Z))
 	library = found
 	return found
 end

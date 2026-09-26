@@ -10,8 +10,13 @@ return {
 		Night = { Brightness = 1, Ambient = "#34304A", OutdoorAmbient = "#454368", FogColor = "#10121E", ExposureCompensation = 0 },
 		-- no haze/glare: they turn the whole street red at sunset
 		Atmosphere = { Density = 0.25, Haze = 0, Glare = 0, Color = "#9FA8C8", Decay = "#3A3F5C" },
-		Bloom = { Intensity = 0.4, Size = 24, Threshold = 1.6 }, -- only neon glows
+		Bloom = { Intensity = 0.25, Size = 18, Threshold = 2.2 }, -- only bright neon glows
 		ColorCorrection = { Saturation = 0.05, Contrast = 0.08, TintColor = "#FFFFFF" },
+		-- our own sky (the place's Sky and effects are set aside at run time, see CityService)
+		Sky = { StarCount = 2500, SunAngularSize = 12, MoonAngularSize = 9 },
+		-- lit windows at night (Neon): keep it dim or whole facades glow
+		NightWindowColor = "#8A6A45",
+		NightLampColor = "#FFE2B0",
 	},
 
 	Weather = {

@@ -197,7 +197,7 @@ local function tagMeshes(parts: { MeshPart }, rng: Random, alwaysOn: boolean?)
 			else
 				p:SetAttribute("DayMaterial", p.Material.Name)
 				p:SetAttribute("DayColor", "#" .. p.Color:ToHex())
-				p:SetAttribute("NightColor", if m == "lamp_lens" then "#FFE2B0" else "#FFC46B")
+				p:SetAttribute("NightColor", if m == "lamp_lens" then World.Lighting.NightLampColor else World.Lighting.NightWindowColor)
 				CollectionService:AddTag(p, "NightGlow")
 			end
 		elseif m == "awning" then
