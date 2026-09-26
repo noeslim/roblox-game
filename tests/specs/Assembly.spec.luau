@@ -6,10 +6,12 @@ local cfg = Cinematics.Craft
 local all = { Body = true, Barrel = true, Stock = true, Sight = true, Magazine = true }
 
 return function(t)
-	t.test("the body goes first, then the slots in order", function()
+	t.test("the body goes first, then the slots in order; the magazine is loaded later", function()
 		local plan = Assembly.Plan(all, Economy.Crafting.Slots, cfg)
 		t.eq(plan.steps[1].slot, "Body")
-		t.eq(#plan.steps, 5)
+		t.eq(#plan.steps, 4)
+		t.eq(plan.load.slot, "Magazine")
+		t.truthy(plan.load.start >= plan.liftStart)
 		for i = 2, #plan.steps do
 			t.truthy(plan.steps[i].start >= plan.steps[i - 1].done, "parts overlap")
 		end
@@ -26,10 +28,14 @@ return function(t)
 		t.eq(Assembly.Phase(plan, 0), "intro")
 		t.eq(Assembly.Phase(plan, plan.steps[1].start + 0.01), "assemble")
 		t.eq(Assembly.Phase(plan, plan.screwStart + 0.01), "screw")
+		t.eq(Assembly.Phase(plan, plan.liftStart + 0.01), "lift")
+		t.eq(Assembly.Phase(plan, plan.loadStart + 0.01), "load")
+		t.eq(Assembly.Phase(plan, plan.rackStart + 0.01), "rack")
+		t.eq(Assembly.Phase(plan, plan.testStart + 0.01), "test")
 		t.eq(Assembly.Phase(plan, plan.inspectStart + 0.01), "inspect")
 		t.eq(Assembly.Phase(plan, plan.outroStart + 0.01), "outro")
 		t.eq(Assembly.Phase(plan, plan.total), "done")
-		t.truthy(plan.total > 5 and plan.total < 12, "total " .. plan.total)
+		t.truthy(plan.total > 8 and plan.total < 16, "total " .. plan.total)
 	end)
 
 	t.test("a part goes tray -> pick -> carry -> seat -> fitted", function()

@@ -12,7 +12,12 @@ return {
 		SeatSeconds = 0.2, -- slides it in (click)
 		SettleSeconds = 0.15,
 		ScrewSeconds = 1.1, -- two screws
-		InspectSeconds = 2.4, -- lifts the weapon and turns it
+		LiftSeconds = 0.7, -- picks the weapon up from the bench
+		LoadSeconds = 1.0, -- the magazine goes in from below
+		RackSeconds = 0.7, -- pulls the action back and lets it go
+		TestSeconds = 1.6, -- aims and dry-fires twice
+		InspectSeconds = 2.2, -- turns it to look at it
+		LoadSlot = "Magazine",
 		OutroSeconds = 0.5,
 		SkipAfter = 0.4, -- click / space / E skips after this
 
@@ -20,14 +25,21 @@ return {
 		CameraOffset = { x = 0, y = 2.9, z = 2.7 }, -- eye position
 		LookAt = { x = 0, y = 0.9, z = -0.3 },
 		Fov = 58,
-		JigHeight = 0.75, -- the frame is held this high above the bench top
+		JigHeight = 0.62, -- the frame rests this high above the bench top (on two small blocks)
 		TrayZ = 0.95, -- parts wait here, spread along X
 		TraySpread = 4.4,
 		CarryArc = 0.9, -- how high a part is lifted while carried
 		SeatDistance = 0.8, -- a part stops this far before sliding in
-		InspectDistance = 3.4, -- weapon in front of the camera during the inspection
+		-- once lifted, the camera stands up and looks straight ahead; the weapon is held in front
+		StandUp = 0.9, -- the eye rises this much
+		HeldOffset = { x = -0.1, y = -0.3, z = -2.9 }, -- weapon in camera space
+		AimOffset = { x = 0, y = -0.32, z = -1.7 }, -- aiming: sight on the view line
+		LoadApproach = 0.35, -- the magazine comes from this far below
+		RackPull = 0.35,
+		Recoil = 0.08, -- studs back per dry fire
 		InspectTurn = 28, -- degrees left and right
 		ClickKick = 0.04, -- camera kick when a part clicks in
+		HandFollow = 16, -- how fast the hands follow their target (higher = snappier)
 
 		SkinColor = "#C68642", -- used when the character has no body colors
 		SleeveColor = "#1E1E24",
@@ -36,7 +48,9 @@ return {
 			Pick = "",
 			Click = "",
 			Ratchet = "",
-			Rack = "", -- at the end of the inspection
+			Rack = "", -- racking the action
+			MagIn = "", -- magazine seated
+			DryFire = "", -- trigger click
 		},
 		Volume = 0.8,
 	},

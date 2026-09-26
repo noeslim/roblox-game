@@ -17,6 +17,7 @@ local Parts = require(Shared.Config.Parts)
 local Visual = require(Shared.Config.Visual)
 local Assembly = require(Shared.Logic.Assembly)
 local ModelFactory = require(Shared.Visual.ModelFactory)
+local CraftPoses = require(Shared.Visual.CraftPoses)
 local UI = require(script.Parent.Parent.UI)
 local Freeze = require(script.Parent.Parent.Freeze)
 
@@ -25,19 +26,7 @@ local CraftCinematicController = {}
 local C = Cinematics.Craft
 local player = Players.LocalPlayer
 local playing = false
-
--- direction each part slides in along, in weapon space
-local INSERT = {
-	Body = Vector3.new(0, 1, 0),
-	Barrel = Vector3.new(1, 0, 0),
-	Stock = Vector3.new(-1, 0, 0),
-	Sight = Vector3.new(0, 1, 0),
-	Magazine = Vector3.new(0, -1, 0),
-} :: { [string]: Vector3 }
-
-local function v3(t: { x: number, y: number, z: number }): Vector3
-	return Vector3.new(t.x, t.y, t.z)
-end
+local Poses = CraftPoses.new({ CFrame = CFrame, Vector3 = Vector3, Assembly = Assembly }, C, Visual.WeaponLayout, Economy.Crafting.Slots)
 
 local function sound(id: string, pitch: number?)
 	if id == "" then
@@ -186,13 +175,6 @@ local function setHand(h: Hand, palmCF: CFrame, elbow: Vector3)
 	h.arm.CFrame = CFrame.lookAt((wrist + elbow) / 2, wrist)
 end
 
--- a hand reaching a point, fingers pointing away from the camera
-local function palmAt(position: Vector3, camPos: Vector3): CFrame
-	local flat = (position - camPos) * Vector3.new(1, 0, 1)
-	local dir = if flat.Magnitude > 0.01 then flat.Unit else Vector3.new(0, 0, -1)
-	return CFrame.lookAt(position, position + dir)
-end
-
 local function revealCard(result: any): ScreenGui
 	local gui = UI.Screen("CraftReveal", 30)
 	gui.IgnoreGuiInset = true
@@ -267,20 +249,12 @@ play = function(bench: BasePart, partIds: { [string]: string }, result: any, onD
 	local camera = workspace.CurrentCamera
 	local oldFov = camera.FieldOfView
 	local startCF = camera.CFrame
-	Freeze.Set(true)
-	setCharacterHidden(true)
 
 	local folder = Instance.new("Folder")
 	folder.Name = "CraftCinematic"
 	folder.Parent = workspace
 
-	local benchCF = bench.CFrame
-	local top = benchCF * CFrame.new(0, C.TopY, 0)
-	local jig = top * CFrame.new(0, C.JigHeight, 0)
-	local camTarget = CFrame.lookAt((benchCF * CFrame.new(v3(C.CameraOffset))).Position, (benchCF * CFrame.new(v3(C.LookAt))).Position)
-	camera.CameraType = Enum.CameraType.Scriptable
-
-	-- one model per part, all in weapon space: pivot = where the whole weapon would be
+	-- one model per part, all in weapon space (pivot = where the whole weapon would be)
 	local models: { [string]: Model } = {}
 	local present: { [string]: boolean } = {}
 	for slot, id in partIds do
@@ -293,17 +267,15 @@ play = function(bench: BasePart, partIds: { [string]: string }, result: any, onD
 		models[slot] = m
 		present[slot] = true
 	end
-	local plan = Assembly.Plan(present, Economy.Crafting.Slots, C)
-	local trays: { [string]: CFrame } = {}
-	local count = #plan.steps
-	for i, step in plan.steps do
-		local x = if count > 1 then -C.TraySpread / 2 + (i - 1) * C.TraySpread / (count - 1) else 0
-		local offset = Visual.WeaponLayout[step.slot] and v3(Visual.WeaponLayout[step.slot].pos) or Vector3.zero
-		-- the part lies on the bench, its own center on the tray spot
-		trays[step.slot] = top * CFrame.new(x, 0.2, C.TrayZ) * CFrame.Angles(math.rad(90), 0, 0) * CFrame.new(-offset)
-		models[step.slot]:PivotTo(trays[step.slot])
+	local ctx = Poses.Context(bench.CFrame, present)
+	local plan = ctx.plan
+	for _, c in ctx.cradle do
+		local block = piece("Cradle", c.size, Color3.fromHex("#3A3A40"), Enum.Material.Metal, folder)
+		block.CFrame = c.cf
 	end
-
+	for slot, m in models do
+		m:PivotTo(Poses.Part(ctx, slot, 0))
+	end
 	local right = makeHand(1, folder)
 	local left = makeHand(-1, folder)
 	local driver = Instance.new("Model")
@@ -311,16 +283,29 @@ play = function(bench: BasePart, partIds: { [string]: string }, result: any, onD
 	local handle = piece("Handle", Vector3.new(0.18, 0.18, 0.55), Color3.fromHex("#B8322A"), Enum.Material.Plastic, driver)
 	local shaft = piece("Shaft", Vector3.new(0.05, 0.05, 0.5), Color3.fromHex("#B8BCC4"), Enum.Material.Metal, driver)
 	driver.Parent = folder
-
 	local barGui, fade = letterbox()
+
+	-- everything is ready: take the camera and freeze the character
+	Freeze.Set(true)
+	setCharacterHidden(true)
+	camera.CameraType = Enum.CameraType.Scriptable
+
 	local reveal: ScreenGui? = nil
 	local light: PointLight? = nil
-	local clicked: { [string]: boolean } = {}
-	local screwed = { false, false }
-	local racked = false
+	local fired: { [string]: boolean } = {}
 	local started = os.clock()
 	local skipTo: number? = nil
 	local finished = false
+	local elapsedOffset = 0
+	local last = started
+	local rightCF, leftCF = Poses.Rest(ctx, 1), Poses.Rest(ctx, -1)
+
+	local function once(key: string, id: string, pitch: number?)
+		if not fired[key] then
+			fired[key] = true
+			sound(id, pitch)
+		end
+	end
 
 	local SKIP_INPUTS = { [Enum.UserInputType.MouseButton1] = true, [Enum.UserInputType.Touch] = true }
 	local SKIP_KEYS = { [Enum.KeyCode.Space] = true, [Enum.KeyCode.E] = true, [Enum.KeyCode.ButtonA] = true, [Enum.KeyCode.Escape] = true }
@@ -330,7 +315,6 @@ play = function(bench: BasePart, partIds: { [string]: string }, result: any, onD
 		end
 	end)
 
-	local elapsedOffset = 0
 	local conn: RBXScriptConnection? = nil
 	local function finish()
 		if finished then
@@ -359,147 +343,109 @@ play = function(bench: BasePart, partIds: { [string]: string }, result: any, onD
 		task.delay(0.35, function()
 			barGui:Destroy()
 		end)
-		playing = false
 		if onDone then
 			onDone()
 		end
 	end
 
 	local function frame()
-		local t = os.clock() - started + elapsedOffset
+		local now = os.clock()
+		local dt = math.min(0.1, now - last)
+		last = now
+		local t = now - started + elapsedOffset
 		local skip = skipTo
 		if skip and t < skip then
 			elapsedOffset += skip - t
 			t = skip
+			-- jump: hands snap to their new place
+			rightCF, leftCF = Poses.Hands(ctx, t)
 		end
 		skipTo = nil
 		local phase = Assembly.Phase(plan, t)
 
-		-- camera: glide over the bench, breathe a little, kick when something clicks in
-		local breathe = CFrame.new(math.sin(t * 1.3) * 0.01, math.sin(t * 2.1) * 0.012, 0)
-		local camCF
+		-- camera: glides over the bench, then stands up with the weapon
+		local camCF = Poses.Camera(ctx, t)
 		if t < C.IntroSeconds then
-			camCF = startCF:Lerp(camTarget, Assembly.Smooth(t / C.IntroSeconds))
-			camera.FieldOfView = oldFov + (C.Fov - oldFov) * Assembly.Smooth(t / C.IntroSeconds)
+			local u = Assembly.Smooth(t / C.IntroSeconds)
+			camCF = startCF:Lerp(camCF, u)
+			camera.FieldOfView = oldFov + (C.Fov - oldFov) * u
 		else
-			camCF = camTarget * breathe
+			camCF *= CFrame.new(math.sin(t * 1.3) * 0.01, math.sin(t * 2.1) * 0.012, 0)
 			camera.FieldOfView = C.Fov
 		end
-		local camPos = camCF.Position
-		local elbowR = (camCF * CFrame.new(0.95, -1.7, 0.2)).Position
-		local elbowL = (camCF * CFrame.new(-0.95, -1.7, 0.2)).Position
-		local rightRest = palmAt((top * CFrame.new(1.7, 0.3, 1.25)).Position, camPos)
-		local leftRest = palmAt((top * CFrame.new(-1.7, 0.3, 1.25)).Position, camPos)
-		local rightCF, leftCF = rightRest, leftRest
 
 		-- parts
-		local inspecting = phase == "inspect" or phase == "outro"
-		local inspectCF = jig
-		if inspecting then
-			local u = math.clamp((t - plan.inspectStart) / C.InspectSeconds, 0, 1)
-			local lift = Assembly.Smooth(math.min(1, u / 0.25))
-			local front = camTarget * CFrame.new(0, -0.35, -C.InspectDistance)
-				* CFrame.Angles(math.rad(-6 * math.sin(u * math.pi)), math.rad(C.InspectTurn * math.sin(u * math.pi * 2)), math.rad(-5 * math.sin(u * math.pi)))
-			inspectCF = jig:Lerp(front, lift)
+		for slot, m in models do
+			m:PivotTo(Poses.Part(ctx, slot, t))
 		end
 		for _, step in plan.steps do
-			local m = models[step.slot]
-			local state, u = Assembly.PartState(step, t)
-			local approach = jig * CFrame.new(INSERT[step.slot] * C.SeatDistance)
-			local pivot
-			if inspecting then
-				pivot = inspectCF
-			elseif state == "tray" or state == "pick" then
-				pivot = trays[step.slot]
-			elseif state == "carry" then
-				local s = Assembly.Smooth(u)
-				pivot = trays[step.slot]:Lerp(approach, s) + Vector3.new(0, math.sin(s * math.pi) * C.CarryArc, 0)
-			elseif state == "seat" then
-				pivot = approach:Lerp(jig, Assembly.Smooth(u))
-			else
-				pivot = jig
-				if not clicked[step.slot] then
-					clicked[step.slot] = true
-					sound(C.Sounds.Click, 0.95 + math.random() * 0.1)
+			if t >= step.done then
+				once("fit" .. step.slot, C.Sounds.Click, 0.95 + (#step.slot % 3) * 0.04)
+				if t < step.done + 0.08 then
 					camCF *= CFrame.new(0, -C.ClickKick, C.ClickKick)
 				end
 			end
-			m:PivotTo(pivot)
-			-- the right hand works on the current part
-			if not inspecting and state ~= "tray" and state ~= "fitted" then
-				local offset = Visual.WeaponLayout[step.slot] and v3(Visual.WeaponLayout[step.slot].pos) or Vector3.zero
-				local grip = palmAt((pivot * CFrame.new(offset)).Position + Vector3.new(0, 0.32, 0.12), camPos)
-				rightCF = if state == "pick" then rightRest:Lerp(grip, Assembly.Smooth(u)) else grip
-				if state == "pick" and u > 0.9 and not clicked["pick" .. step.slot] then
-					clicked["pick" .. step.slot] = true
-					sound(C.Sounds.Pick)
-				end
-			end
 		end
-		-- the left hand holds the frame once it is on the jig
-		if present.Body and not inspecting and #plan.steps > 0 and t >= plan.steps[1].done then
-			leftCF = palmAt((jig * CFrame.new(-0.55, 0.1, 0.35)).Position, camPos)
+		local l = plan.load
+		if l and t >= l.done then
+			once("magIn", C.Sounds.MagIn)
+		end
+		if t >= plan.rackStart + (plan.testStart - plan.rackStart) * 0.3 then
+			once("rack", C.Sounds.Rack)
+		end
+		for i, shot in Poses.Shots(ctx) do
+			if t >= shot then
+				once("shot" .. i, C.Sounds.DryFire)
+			end
 		end
 
-		-- screws
-		driver.Parent = if phase == "screw" then folder else nil
-		if phase == "screw" then
-			local u = (t - plan.screwStart) / C.ScrewSeconds
-			local index = if u < 0.5 then 1 else 2
-			local local_u = (u - (index - 1) * 0.5) / 0.5
-			local spot = jig * CFrame.new(if index == 1 then -0.35 else 0.35, 0, 0.21)
-			if not screwed[index] then
-				screwed[index] = true
-				sound(C.Sounds.Ratchet, 1 + index * 0.05)
-			end
-			local reach = Assembly.Smooth(math.min(1, local_u / 0.3))
-			local tip = spot * CFrame.new(0, 0, 0.55 - 0.3 * reach)
-			local twist = CFrame.Angles(0, 0, local_u * math.pi * 6)
-			local driverCF = CFrame.lookAt(tip.Position, spot.Position) * twist
-			shaft.CFrame = driverCF * CFrame.new(0, 0, -0.25)
-			handle.CFrame = driverCF * CFrame.new(0, 0, 0.27)
-			rightCF = palmAt((driverCF * CFrame.new(0, 0.12, 0.35)).Position, camPos)
+		-- screwdriver
+		local d = Poses.Driver(ctx, t)
+		driver.Parent = if d then folder else nil
+		if d then
+			shaft.CFrame = d * CFrame.new(0, 0, -0.25)
+			handle.CFrame = d * CFrame.new(0, 0, 0.27)
+			once(if t < (plan.screwStart + plan.liftStart) / 2 then "screw1" else "screw2", C.Sounds.Ratchet)
 		end
 
-		-- inspection: both hands on the weapon, reveal, rarity light
-		if inspecting then
-			rightCF = palmAt((inspectCF * CFrame.new(-0.35, -0.45, 0.25)).Position, camPos)
-			leftCF = palmAt((inspectCF * CFrame.new(1.0, -0.1, 0.25)).Position, camPos)
-			if reveal == nil then
-				reveal = revealCard(result)
-				local body: Model? = models.Body
-				if body == nil then
-					for _, m in models do
-						body = m
-						break
-					end
-				end
-				local anchorPart = body and body:FindFirstChildWhichIsA("BasePart")
-				if anchorPart then
-					local l = Instance.new("PointLight")
-					l.Color = UI.RarityColor(result.rarity)
-					l.Range = 6
-					l.Brightness = 0.6 + (table.find(Economy.RarityOrder, result.rarity) or 1) * 0.35
-					l.Parent = anchorPart
-					light = l
+		-- hands: follow their targets smoothly (no teleport between two moves)
+		local targetR, targetL = Poses.Hands(ctx, t)
+		local k = 1 - math.exp(-dt * C.HandFollow)
+		rightCF = rightCF:Lerp(targetR, k)
+		leftCF = leftCF:Lerp(targetL, k)
+		local elbowR = (camCF * CFrame.new(0.95, -1.7, 0.2)).Position
+		local elbowL = (camCF * CFrame.new(-0.95, -1.7, 0.2)).Position
+		setHand(right, rightCF, elbowR)
+		setHand(left, leftCF, elbowL)
+
+		-- inspection: name, rarity, price and a light in the rarity color
+		local inspecting = phase == "inspect" or phase == "outro"
+		if inspecting and reveal == nil then
+			reveal = revealCard(result)
+			local body: Model? = models.Body
+			if body == nil then
+				for _, m in models do
+					body = m
+					break
 				end
 			end
-			if not racked and t > plan.inspectStart + C.InspectSeconds * 0.8 then
-				racked = true
-				sound(C.Sounds.Rack)
+			local anchorPart = body and body:FindFirstChildWhichIsA("BasePart")
+			if anchorPart then
+				local pl = Instance.new("PointLight")
+				pl.Color = UI.RarityColor(result.rarity)
+				pl.Range = 6
+				pl.Brightness = 0.6 + (table.find(Economy.RarityOrder, result.rarity) or 1) * 0.35
+				pl.Parent = anchorPart
+				light = pl
 			end
 		end
 		if light then
 			light.Enabled = inspecting
 		end
 
-		setHand(right, rightCF, elbowR)
-		setHand(left, leftCF, elbowL)
 		camera.CFrame = camCF
-
 		if phase == "outro" then
-			local u = (t - plan.outroStart) / C.OutroSeconds
-			fade.BackgroundTransparency = 1 - Assembly.Smooth(u)
+			fade.BackgroundTransparency = 1 - Assembly.Smooth((t - plan.outroStart) / C.OutroSeconds)
 		elseif phase == "done" then
 			finish()
 		end
