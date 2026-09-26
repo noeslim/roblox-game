@@ -248,7 +248,7 @@ On ne recrute pas en un clic : chaque recrue doit être **convaincue par une cha
 - Un **MissionService** générique (étapes : aller à, livrer, vendre N, fabriquer une rareté, survivre, trouver un PNJ, gagner une manche). Il servira aussi pour la contrebande, les convois et les événements. La logique d'avancement des missions est pure et testée.
 - Recrues sauvegardées dans le profil (nom, rôle, niveau, loyauté, équipement).
 
-## 18. Hors périmètre (pour l'instant)
+## 22. Hors périmètre (pour l'instant)
 
 - Marché global entre serveurs (MemoryStore) : plus tard.
 - Échange direct d'armes entre joueurs : plus tard, avec système anti-arnaque.
