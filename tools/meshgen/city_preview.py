@@ -150,8 +150,20 @@ def index_library(layout_offsets):
     return layout_offsets
 
 
-def place_asset(name, base, offsets, collection):
+def add_point_light(base, l, collection):
+    data = bpy.data.lights.new("InteriorLight", "POINT")
+    data.color = build.hex_to_linear(l["color"])[:3]
+    data.energy = 400 * l["brightness"]
+    data.shadow_soft_size = 0.5
+    ob = bpy.data.objects.new("InteriorLight", data)
+    ob.matrix_world = base @ Matrix.Translation(rb((l["pos"]["x"], l["pos"]["y"], l["pos"]["z"])))
+    collection.objects.link(ob)
+
+
+def place_asset(name, base, offsets, collection, skip_prefix=None):
     for ob in LIBRARY.get(name, []):
+        if skip_prefix and ob.name.split("__")[1].startswith(skip_prefix):
+            continue
         inst = ob.copy()  # shares the mesh data
         inst.hide_render = False
         inst.hide_viewport = False
@@ -194,11 +206,18 @@ def build_city(offsets):
 
     for spec in DATA["slabParts"]:
         make_part(spec, identity, col)
-    for b in LAYOUT["buildings"]:
+    for bi, b in enumerate(LAYOUT["buildings"]):
         a = CFG["Archetypes"][b["archetype"]]
         base = roblox_matrix(b["x"], side, b["z"], b["rot"])
-        make_part({"name": "Body", "shape": "Block", "size": {"x": a["w"], "y": a["h"], "z": a["d"]}, "pos": {"x": 0, "y": a["h"] / 2, "z": 0}, "material": a["material"], "color": b["color"], "texture": a.get("texture")}, base, col)
-        place_asset("bld_" + b["archetype"], base, offsets, col)
+        spec = DATA["buildingParts"][bi]
+        for p in spec["shell"] + spec["furniture"]:
+            make_part(p, base, col)
+        if spec["door"]:
+            dr = spec["door"]
+            make_part({"name": "Door", "shape": "Block", "size": {"x": dr["w"], "y": dr["h"], "z": dr["t"]}, "pos": {"x": dr["x"], "y": dr["y"], "z": dr["z"]}, "material": dr["material"], "color": dr["color"]}, base, col)
+        for l in spec["lights"]:
+            add_point_light(base, l, col)
+        place_asset("bld_" + b["archetype"], base, offsets, col, skip_prefix="door_")
         if b.get("sign"):
             make_part({"name": "Sign", "shape": "Block", "size": {"x": min(a["w"] * 0.6, 18), "y": 3, "z": 0.4}, "pos": {"x": 0, "y": 12, "z": a["d"] / 2 + 0.7}, "material": "Neon", "color": "#FF3FA4"}, base, col)
     B = CFG["Houses"]["BasementDepth"]
@@ -301,6 +320,25 @@ def main():
         if near and (loc.z > base_y + 12.5 or ob.name in ("BasementWallS", "BasementWallE")):
             ob.hide_render = True
     shot(cam, "basement", (h["x"] + 4, base_y + 60, h["z"] + 45), (h["x"] + 4, base_y, h["z"]), lens=24)
+
+    # building interiors: camera just inside the door, looking in
+    side = CFG["Grid"]["SidewalkHeight"]
+    done = set()
+    for b in LAYOUT["buildings"]:
+        kind = CFG["Archetypes"][b["archetype"]]["interior"]["kind"]
+        if kind in done or kind not in ("store", "lobby", "office", "restaurant", "warehouse", "mansion"):
+            continue
+        done.add(kind)
+        a = CFG["Archetypes"][b["archetype"]]
+        r = math.radians(b["rot"])
+
+        def world(x, y, z):
+            return (b["x"] + x * math.cos(r) + z * math.sin(r), side + y, b["z"] - x * math.sin(r) + z * math.cos(r))
+
+        dx = a["door"]["x"]
+        eye = world(dx * 0.6, 5.2, a["d"] / 2 - 2.5)
+        target = world(-dx * 0.3, 3.2, -a["d"] / 2 + 1)
+        shot(cam, "interior_" + kind, eye, target, lens=16)
 
 
 if __name__ == "__main__":

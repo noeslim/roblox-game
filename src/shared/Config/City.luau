@@ -38,6 +38,8 @@ City.DistrictNames = {
 
 -- Building archetypes: footprint W (along the street) x D (depth), height H. The 3D details come
 -- from the mesh library (model "bld_<archetype>"), the walls are plain parts (cheap collisions).
+export type Door = { x: number, w: number, h: number, open: boolean? } -- entrance on the front (+Z) face, x = center; open = no door leaf
+export type Interior = { kind: string, height: number } -- furnished ground floor (Logic/CityParts.Interior)
 export type Archetype = {
 	w: number,
 	d: number,
@@ -45,17 +47,19 @@ export type Archetype = {
 	material: string, -- body Enum.Material name
 	colors: { string },
 	texture: string?, -- tileable PBR texture (tools/meshgen/textures.py) applied to the walls
+	door: Door, -- shared with tools/meshgen (the facade's door frame is drawn there)
+	interior: Interior?,
 }
 
 City.Archetypes = {
-	apartment = { w = 40, d = 30, h = 48, material = "Brick", texture = "brick_red", colors = { "#6B3A2E", "#7A4A38", "#5A3A30", "#4F3B34" } },
-	shop = { w = 32, d = 26, h = 24, material = "Brick", texture = "brick_dark", colors = { "#5E4A3E", "#3E3A40", "#6A4A3A", "#4A4E52" } },
-	office = { w = 44, d = 40, h = 100, material = "Concrete", texture = "concrete", colors = { "#5A5E66", "#4A4E56", "#6A6660" } },
-	tower = { w = 40, d = 40, h = 160, material = "Concrete", texture = "concrete", colors = { "#3E4450", "#4A4E58" } },
-	warehouse = { w = 60, d = 44, h = 26, material = "CorrodedMetal", texture = "metal_corrugated", colors = { "#5A5048", "#4A5058", "#6A5A48" } },
-	chinatown = { w = 28, d = 24, h = 30, material = "Brick", texture = "brick_red", colors = { "#7A2E2A", "#8A5A2E", "#5A2A2E", "#6A3A30" } },
-	mansion = { w = 56, d = 40, h = 22, material = "Plaster", texture = "plaster", colors = { "#E8E2D6", "#D8D0C0", "#EDE6DA" } },
-	ruin = { w = 44, d = 32, h = 18, material = "Concrete", texture = "concrete", colors = { "#4A4640", "#55504A" } },
+	apartment = { w = 40, d = 30, h = 48, material = "Brick", texture = "brick_red", colors = { "#6B3A2E", "#7A4A38", "#5A3A30", "#4F3B34" }, door = { x = 0, w = 5, h = 8 }, interior = { kind = "lobby", height = 11 } },
+	shop = { w = 32, d = 26, h = 24, material = "Brick", texture = "brick_dark", colors = { "#5E4A3E", "#3E3A40", "#6A4A3A", "#4A4E52" }, door = { x = 12, w = 4, h = 8 }, interior = { kind = "store", height = 11 } },
+	office = { w = 44, d = 40, h = 100, material = "Concrete", texture = "concrete", colors = { "#5A5E66", "#4A4E56", "#6A6660" }, door = { x = 0, w = 6, h = 8.5 }, interior = { kind = "office", height = 10 } },
+	tower = { w = 40, d = 40, h = 160, material = "Concrete", texture = "concrete", colors = { "#3E4450", "#4A4E58" }, door = { x = 0, w = 6, h = 8.5 }, interior = { kind = "office", height = 10 } },
+	warehouse = { w = 60, d = 44, h = 26, material = "CorrodedMetal", texture = "metal_corrugated", colors = { "#5A5048", "#4A5058", "#6A5A48" }, door = { x = 0, w = 3.5, h = 7.5 }, interior = { kind = "warehouse", height = 24 } },
+	chinatown = { w = 28, d = 24, h = 30, material = "Brick", texture = "brick_red", colors = { "#7A2E2A", "#8A5A2E", "#5A2A2E", "#6A3A30" }, door = { x = 10, w = 3.5, h = 7.5 }, interior = { kind = "restaurant", height = 9.5 } },
+	mansion = { w = 56, d = 40, h = 22, material = "Plaster", texture = "plaster", colors = { "#E8E2D6", "#D8D0C0", "#EDE6DA" }, door = { x = 0, w = 5, h = 9 }, interior = { kind = "mansion", height = 10.5 } },
+	ruin = { w = 44, d = 32, h = 18, material = "Concrete", texture = "concrete", colors = { "#4A4640", "#55504A" }, door = { x = 0, w = 6, h = 7, open = true }, interior = { kind = "squat", height = 9 } },
 } :: { [string]: Archetype }
 
 -- Which buildings each district uses (weights). Special districts are laid out by hand in CityLayout.
@@ -142,6 +146,18 @@ City.BillboardAds = {
 	{ text = "STAY IN SCHOOL", color = "#1A1A20", background = "#E8E2D6" },
 	{ text = "LUCKY DRAGON BUFFET", color = "#FFD84A", background = "#7A1E1E" },
 	{ text = "SEE SOMETHING? SAY NOTHING", color = "#FF3B3B", background = "#111114" },
+}
+
+-- Building interiors: every building has a furnished ground floor (Logic/CityParts.Interior) and a
+-- door that opens when someone walks up to it (DoorController, client side)
+City.Interiors = {
+	Enabled = true,
+	WallThickness = 1,
+	DoorOpenDistance = 7, -- studs
+	DoorOpenAngle = 100, -- degrees
+	DoorSeconds = 0.35,
+	CorridorWidth = 6, -- kept free of furniture in front of the door
+	CorridorDepth = 8,
 }
 
 -- Instance streaming (phones only load what is around the player). Applied by MapBuilder.

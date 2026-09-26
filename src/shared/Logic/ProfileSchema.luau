@@ -9,7 +9,7 @@
 
 local ProfileSchema = {}
 
-ProfileSchema.VERSION = 3
+ProfileSchema.VERSION = 4
 
 export type WeaponData = {
 	id: string,
@@ -28,6 +28,10 @@ export type StatsData = {
 	Earned: number,
 }
 
+export type DailyData = { LastDay: number, Streak: number }
+export type ContractEntry = { id: string, progress: number, done: boolean }
+export type ContractsData = { Day: number, List: { ContractEntry } }
+
 export type ProfileData = {
 	Version: number,
 	Money: number,
@@ -37,6 +41,8 @@ export type ProfileData = {
 	Weapons: { WeaponData },
 	Hideout: HideoutData,
 	Stats: StatsData,
+	Daily: DailyData,
+	Contracts: ContractsData,
 }
 
 export type SchemaConfig = {
@@ -50,11 +56,17 @@ export type SchemaConfig = {
 	maxHideoutObjects: number,
 	starterHideout: { string },
 	parts: { [string]: any }, -- the parts catalogue (Config/Parts); only `.slot` is read
+	contractIds: { [string]: number }, -- contract id -> target (Config/Economy.Contracts)
+	contractsPerDay: number,
 }
 
 -- Builds the SchemaConfig from Config/Economy and Config/Parts.
 function ProfileSchema.ConfigFrom(economy: any, parts: { [string]: any }): SchemaConfig
 	local p = economy.Profile
+	local contractIds = {}
+	for _, def in economy.Contracts.Pool do
+		contractIds[def.id] = def.target
+	end
 	return {
 		startingMoney = economy.StartingMoney,
 		maxMoney = economy.MaxMoney,
@@ -66,6 +78,8 @@ function ProfileSchema.ConfigFrom(economy: any, parts: { [string]: any }): Schem
 		maxHideoutObjects = economy.Building.MaxObjectsExtended,
 		starterHideout = p.StarterHideout,
 		parts = parts,
+		contractIds = contractIds,
+		contractsPerDay = economy.Contracts.PerDay,
 	}
 end
 
@@ -93,6 +107,9 @@ ProfileSchema.Migrations = {
 			end
 		end
 	end,
+	[3] = function(data: any, cfg: SchemaConfig)
+		-- v4 added the daily streak and daily contracts: filled with defaults by Sanitize
+	end,
 } :: { [number]: Migration }
 
 local function isFiniteNumber(v: any): boolean
@@ -116,6 +133,8 @@ function ProfileSchema.Template(cfg: SchemaConfig): ProfileData
 		Weapons = {},
 		Hideout = { Objects = table.clone(cfg.starterHideout) },
 		Stats = { Crafted = 0, Sold = 0, Earned = 0 },
+		Daily = { LastDay = 0, Streak = 0 },
+		Contracts = { Day = 0, List = {} },
 	}
 end
 
@@ -223,6 +242,28 @@ function ProfileSchema.Sanitize(data: any, cfg: SchemaConfig): ProfileData
 		Sold = wholeInRange(stats.Sold, 0, math.huge, 0),
 		Earned = wholeInRange(stats.Earned, 0, math.huge, 0),
 	}
+
+	local daily = if type(data.Daily) == "table" then data.Daily else {}
+	data.Daily = {
+		LastDay = wholeInRange(daily.LastDay, 0, math.huge, 0),
+		Streak = wholeInRange(daily.Streak, 0, math.huge, 0),
+	}
+
+	local contracts = if type(data.Contracts) == "table" then data.Contracts else {}
+	local list: { ContractEntry } = {}
+	if type(contracts.List) == "table" then
+		for _, e in ipairs(contracts.List) do
+			local target: number? = if type(e) == "table" and type(e.id) == "string" then cfg.contractIds[e.id] else nil
+			if target and #list < cfg.contractsPerDay then
+				table.insert(list, {
+					id = e.id,
+					progress = wholeInRange(e.progress, 0, target, 0),
+					done = e.done == true,
+				})
+			end
+		end
+	end
+	data.Contracts = { Day = wholeInRange(contracts.Day, 0, math.huge, 0), List = list }
 
 	return data :: ProfileData
 end

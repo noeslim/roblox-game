@@ -248,6 +248,23 @@ On ne recrute pas en un clic : chaque recrue doit être **convaincue par une cha
 - Un **MissionService** générique (étapes : aller à, livrer, vendre N, fabriquer une rareté, survivre, trouver un PNJ, gagner une manche). Il servira aussi pour la contrebande, les convois et les événements. La logique d'avancement des missions est pure et testée.
 - Recrues sauvegardées dans le profil (nom, rôle, niveau, loyauté, équipement).
 
+## 23. Donner envie de revenir (sans pièges)
+
+Principe : le joueur revient parce que le jeu est bon et qu'il a toujours un objectif proche, pas parce qu'on le manipule. Public Roblox = beaucoup de mineurs : pas de FOMO payant, pas de hasard payant, pas de punition sévère pour une absence.
+
+**En place (code) :**
+- **Série quotidienne** (`Logic/DailyReward`, `Economy.Daily`) : une récompense par jour, qui grandit sur 7 jours puis recommence. Rater un jour remet la série à 1 : c'est tout.
+- **Contrats du jour** (`Logic/Contracts`, `Economy.Contracts`) : 3 objectifs par jour tirés d'une liste (vendre, gagner, fabriquer du Rare, dealer la nuit, enchaîner un combo, recevoir des pourboires). Payés dès qu'ils sont finis, avec un bonus quand les trois sont faits. Le panneau reste à l'écran : il y a toujours un objectif proche.
+- **Boucle de base** déjà là : fabriquer → vendre → combo → niveau → nouvelles pièces → meilleures armes.
+- **Ressenti** : ambiance sombre, endurance, corps qui réagissent (`Config/Mood`). Une ville qui paraît vivante et dure donne envie d'y rester.
+
+**Pistes pour la suite, par ordre d'impact :**
+1. Réputation de rue visible (titres : Corner Boy → Plug → Kingpin) et classement par serveur.
+2. Événements de nuit (convoi à braquer, marché noir éphémère) annoncés quelques minutes avant.
+3. Crew recruté par missions (§21) : on revient pour faire progresser ses PNJ.
+4. Cosmétiques gagnés en jeu (tenue, enseigne, néons de la planque) pour montrer son rang.
+5. Saisons de 4 à 6 semaines avec un pass *gagné en jouant* (une version payante éventuelle devra rester cosmétique, sans hasard).
+
 ## 22. Hors périmètre (pour l'instant)
 
 - Marché global entre serveurs (MemoryStore) : plus tard.

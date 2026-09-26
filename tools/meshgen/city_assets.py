@@ -90,8 +90,12 @@ def ac_unit(x, y, z):
     cyl(0.8, 0.1, (x, y + 2.02, z), "metal_black", bev=0, verts=12)
 
 
+DOOR_LEAF = {"wood_dark": "door_wood", "window_glass": "door_glass", "metal_dark": "door_metal"}
+
+
 def door(face, u, W, D, w=4, h=7.5, mat="wood_dark", y0=0.0):
-    box(_face_size(face, w, h, 0.2), _face_point(face, u, y0 + h / 2, W, D, 0.08), mat, bev=0.02, segs=1)
+    leaf = DOOR_LEAF.get(mat, mat)  # own mesh: replaced in game by a door that opens
+    box(_face_size(face, w, h, 0.2), _face_point(face, u, y0 + h / 2, W, D, 0.08), leaf, bev=0.02, segs=1)
     box(_face_size(face, w + 1, 0.5, 0.5), _face_point(face, u, y0 + h + 0.25, W, D, 0.2), "trim_light", bev=0, segs=1)
     for du in (-w / 2 - 0.25, w / 2 + 0.25):
         box(_face_size(face, 0.5, h, 0.5), _face_point(face, u + du, y0 + h / 2, W, D, 0.2), "trim_light", bev=0, segs=1)
@@ -118,7 +122,8 @@ def bld_apartment():
     for face in ("left", "right"):
         window_grid(face, W, D, floors, fh, 3, 0, 3.0, 5.5, rng)
     # ground floor front: entrance + two windows
-    door("front", 0, W, D, w=5, h=8)
+    dr = a["door"]
+    door("front", dr["x"], W, D, w=dr["w"], h=dr["h"])
     box((9, 0.4, 4), (0, 9.2, D / 2 + 2), "trim_dark", bev=0, segs=1)
     for u in (-13, 13):
         window("front", u, 5, 6, 5, W, D, lit=True)
@@ -152,7 +157,8 @@ def bld_shop():
     box((W - 7, 1, 0.5), (-2, 0.5, D / 2 + 0.2), "trim_dark", bev=0, segs=1)
     for u in (-W / 2 + 4, -2, W / 2 - 8):
         box((0.4, 7.5, 0.4), (u, 4.5, D / 2 + 0.2), "trim_dark", bev=0, segs=1)
-    door("front", W / 2 - 4, W, D, w=4, h=8, mat="window_glass")
+    dr = a["door"]
+    door("front", dr["x"], W, D, w=dr["w"], h=dr["h"], mat="window_glass")
     awning("front", -2, 9.8, W - 6, W, D)
     window_grid("front", W, D, 2, H / 2, 4, 1, 3.5, 5, rng)
     window_grid("back", W, D, 2, H / 2, 4, 1, 3.5, 5, rng)
@@ -164,9 +170,12 @@ def bld_shop():
     ac_unit(4, H, -6)
 
 
-def glass_tower(W, D, H, floor_h, rng, crown=True):
+def glass_tower(W, D, H, floor_h, rng, crown=True, lobby_h=None, dr=None):
+    lobby_h = lobby_h or floor_h
     floors = int(H // floor_h)
     for f in range(1, floors):
+        if f * floor_h < lobby_h:
+            continue  # the lobby is taller than a floor
         y = f * floor_h + floor_h * 0.5
         for face in ("front", "back", "left", "right"):
             length = W if face in ("front", "back") else D
@@ -176,11 +185,12 @@ def glass_tower(W, D, H, floor_h, rng, crown=True):
         n = int(length // 4)
         for i in range(n + 1):
             u = -length / 2 + 0.5 + i * (length - 1) / n
-            box(_face_size(face, 0.35, H - floor_h, 0.35), _face_point(face, u, floor_h + (H - floor_h) / 2, W, D, 0.2), "trim_dark", bev=0, segs=1)
+            box(_face_size(face, 0.35, H - lobby_h, 0.35), _face_point(face, u, lobby_h + (H - lobby_h) / 2, W, D, 0.2), "trim_dark", bev=0, segs=1)
     # lobby
-    box((W * 0.6, floor_h - 1, 0.15), (0, floor_h / 2, D / 2 + 0.06), "window_glass", bev=0, segs=1)
-    box((W * 0.7, 0.6, 5), (0, floor_h, D / 2 + 2.5), "trim_dark", bev=0, segs=1)
-    door("front", 0, W, D, w=6, h=floor_h - 1.5, mat="window_glass")
+    box((W * 0.6, lobby_h - 1, 0.15), (0, lobby_h / 2, D / 2 + 0.06), "window_glass", bev=0, segs=1)
+    box((W * 0.7, 0.6, 5), (0, lobby_h, D / 2 + 2.5), "trim_dark", bev=0, segs=1)
+    dr = dr or {"x": 0, "w": 6, "h": lobby_h - 1.5}
+    door("front", dr["x"], W, D, w=dr["w"], h=dr["h"], mat="window_glass")
     parapet(W, D, H, "trim_dark", h=1.2)
     if crown:
         box((W * 0.6, 6, D * 0.6), (0, H + 3, 0), "concrete", bev=0.1, segs=1)
@@ -193,13 +203,13 @@ def glass_tower(W, D, H, floor_h, rng, crown=True):
 @city_asset
 def bld_office():
     a = ARCH["office"]
-    glass_tower(a["w"], a["d"], a["h"], 5, random.Random(13), crown=False)
+    glass_tower(a["w"], a["d"], a["h"], 5, random.Random(13), crown=False, lobby_h=a["interior"]["height"], dr=a["door"])
 
 
 @city_asset
 def bld_tower():
     a = ARCH["tower"]
-    glass_tower(a["w"], a["d"], a["h"], 5, random.Random(14), crown=True)
+    glass_tower(a["w"], a["d"], a["h"], 5, random.Random(14), crown=True, lobby_h=a["interior"]["height"], dr=a["door"])
 
 
 @city_asset
@@ -215,7 +225,8 @@ def bld_warehouse():
     for face in ("left", "right", "back"):
         length = W if face == "back" else D
         box(_face_size(face, length - 6, 2, 0.15), _face_point(face, 0, H - 4, W, D, 0.06), "window_glass", bev=0, segs=1)
-    door("front", 0, W, D, w=3.5, h=7.5, mat="metal_dark")
+    dr = a["door"]
+    door("front", dr["x"], W, D, w=dr["w"], h=dr["h"], mat="metal_dark")
     for i in range(4):
         cyl(1.2, 2.5, (-20 + i * 13, H + 1.25, 0), "metal_steel", bev=0.1, verts=12)
         lathe([(1.6, 0), (0.1, 0.8)], (-20 + i * 13, H + 2.5, 0), "metal_dark", verts=12)
@@ -231,7 +242,8 @@ def bld_chinatown():
     rng = random.Random(15)
     fh = H / 3
     box((W - 6, 6.5, 0.15), (-1, 4, D / 2 + 0.06), "window_glass", bev=0, segs=1)
-    door("front", W / 2 - 4, W, D, w=3.5, h=7.5, mat="wood_dark")
+    dr = a["door"]
+    door("front", dr["x"], W, D, w=dr["w"], h=dr["h"], mat="wood_dark")
     awning("front", -1, 9.5, W - 4, W, D, depth=3)
     for f in (1, 2):
         y = f * fh
@@ -267,7 +279,8 @@ def bld_mansion():
     box((W, 1.2, 0.1), (0, 11.9, D / 2 + 5.9), "glass", bev=0, segs=1)
     for u in (-12, 12):
         box((1.2, 10.5, 1.2), (u, 5.25, D / 2 + 5), "plaster_white", bev=0.1, segs=1)
-    door("front", 0, W, D, w=5, h=9, mat="wood_dark")
+    dr = a["door"]
+    door("front", dr["x"], W, D, w=dr["w"], h=dr["h"], mat="wood_dark")
     for face in ("left", "right", "back"):
         window_grid(face, W, D, 2, H / 2, 3, 0, 6, 6, random.Random(16), lit_chance=0.3, frame="trim_dark")
 
@@ -289,6 +302,8 @@ def bld_ruin():
             box(_face_size(face, 4, 5, 0.2), _face_point(face, u, 10, W, D, 0.06), "metal_black", bev=0, segs=1)
     for i in range(12):
         x, z = rng.uniform(-W / 2 - 4, W / 2 + 4), rng.uniform(D / 2 + 1, D / 2 + 6)
+        if abs(x - a["door"]["x"]) < a["door"]["w"] / 2 + 3:
+            x += a["door"]["w"] + 6  # keep the doorway clear
         box((rng.uniform(1, 3), rng.uniform(0.6, 1.6), rng.uniform(1, 3)), (x, 0.5, z), "concrete", bev=0.2, segs=1, rot=(rng.uniform(-20, 20), rng.uniform(0, 90), rng.uniform(-20, 20)))
     for i in range(6):
         x = rng.uniform(-W / 2 + 2, W / 2 - 2)

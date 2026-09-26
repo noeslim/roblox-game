@@ -11,6 +11,7 @@ local Shop = require(Shared.Logic.Shop)
 local WeaponCrafting = require(Shared.Logic.WeaponCrafting)
 local DataService = require(script.Parent.DataService)
 local BuildService = require(script.Parent.BuildService)
+local GoalsService = require(script.Parent.GoalsService)
 local ServerNet = require(script.Parent.Parent.Lib.ServerNet)
 local AnimServer = require(script.Parent.Parent.Lib.AnimServer)
 
@@ -74,6 +75,10 @@ local function craft(player: Player, partIds: any): (boolean, any)
 	table.insert(data.Weapons, saved)
 	DataService.AddXp(player, Economy.Progression.XpPerCraft)
 	DataService.Sync(player)
+	GoalsService.Record(player, "craft", 1)
+	if (table.find(Economy.RarityOrder, weapon.rarity) or 0) >= (table.find(Economy.RarityOrder, "Rare") or 99) then
+		GoalsService.Record(player, "craftRare", 1)
+	end
 
 	AnimServer.Play(player.Character, "Hammer")
 	ServerNet.FireAllClients("CraftFx", bench:GetPivot().Position, weapon.parts, weapon.rarity, weapon.value, player.UserId)

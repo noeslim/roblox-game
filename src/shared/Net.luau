@@ -16,6 +16,7 @@ Net.Functions = {
 	"RequestSell",
 	"RequestAcceptCounter",
 	"RequestDecline",
+	"RequestClaimDaily",
 }
 
 Net.Events = {
@@ -25,6 +26,7 @@ Net.Events = {
 	"SaleFx", -- server -> all: (info table)
 	"LevelUp", -- server -> owner: (newLevel)
 	"PlayPose", -- server -> all: (model, animationName) procedural animation played by every client
+	"GoalsSync", -- server -> owner: daily streak + contracts (GoalsService.Snapshot)
 	"LookAt", -- client -> server: (pitch, yaw) where the player looks, in degrees (head animation)
 }
 

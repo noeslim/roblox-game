@@ -43,6 +43,30 @@ Economy.Pricing = {
 	PriceStep = 0.05, -- +/- buttons change the price by 5% of the suggested price
 }
 
+-- Reasons to come back (Logic/DailyReward, Logic/Contracts) -----------------------------------
+-- Rewards are in-game cash earned by playing: no Robux, no paid randomness.
+Economy.Daily = {
+	Rewards = { 150, 200, 250, 350, 450, 600, 1200 }, -- day 1..7 of a streak, then it starts again
+	XpPerClaim = 20,
+}
+
+Economy.Contracts = {
+	PerDay = 3, -- new contracts every day (UTC), different for each player
+	AllDoneBonus = 750, -- extra cash when the three are done
+	-- event: what counts (fired by the services); mode "max" = best value reached, otherwise summed
+	Pool = {
+		{ id = "sell3", event = "sale", target = 3, reward = 300, xp = 40, text = "Sell 3 weapons" },
+		{ id = "sell6", event = "sale", target = 6, reward = 700, xp = 80, text = "Sell 6 weapons" },
+		{ id = "earn1500", event = "earned", target = 1500, reward = 400, xp = 50, text = "Make $1,500 from deals" },
+		{ id = "earn4000", event = "earned", target = 4000, reward = 900, xp = 90, text = "Make $4,000 from deals" },
+		{ id = "craft3", event = "craft", target = 3, reward = 250, xp = 40, text = "Craft 3 weapons" },
+		{ id = "rare1", event = "craftRare", target = 1, reward = 500, xp = 60, text = "Craft a Rare weapon or better" },
+		{ id = "night2", event = "saleNight", target = 2, reward = 450, xp = 50, text = "Close 2 deals at night" },
+		{ id = "combo3", event = "combo", target = 3, reward = 400, xp = 50, mode = "max", text = "Hit a x3 deal streak" },
+		{ id = "tips2", event = "tip", target = 2, reward = 300, xp = 40, text = "Get tipped twice" },
+	},
+}
+
 -- Dealer level ------------------------------------------------------------------
 Economy.Progression = {
 	XpPerSale = 10,

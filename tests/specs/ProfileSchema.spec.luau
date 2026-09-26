@@ -225,4 +225,20 @@ return function(t)
 		t.eq(d.Hideout.Objects[1], "counter_folding,0,6,0")
 		t.eq(d.Hideout.Objects[2], "rug,0,0,0")
 	end)
+
+	t.test("v3 profile gets an empty streak and contracts; bad contracts are dropped", function()
+		local d = ProfileSchema.Template(cfg)
+		d.Version = 3
+		d.Daily = nil
+		d.Contracts = { Day = 20000, List = { { id = "sell3", progress = 99, done = true }, { id = "hack", progress = 1 }, "junk" } }
+		t.truthy(ProfileSchema.Prepare(d, cfg))
+		t.eq(d.Version, ProfileSchema.VERSION)
+		t.eq(d.Daily.LastDay, 0)
+		t.eq(d.Daily.Streak, 0)
+		t.eq(d.Contracts.Day, 20000)
+		t.eq(#d.Contracts.List, 1)
+		t.eq(d.Contracts.List[1].progress, 3) -- clamped to the target
+		t.truthy(d.Contracts.List[1].done)
+	end)
+
 end

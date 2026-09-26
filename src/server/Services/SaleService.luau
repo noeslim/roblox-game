@@ -8,6 +8,7 @@ local Economy = require(Shared.Config.Economy)
 local Customer = require(Shared.Logic.Customer)
 local DataService = require(script.Parent.DataService)
 local CustomerService = require(script.Parent.CustomerService)
+local GoalsService = require(script.Parent.GoalsService)
 local ServerNet = require(script.Parent.Parent.Lib.ServerNet)
 local AnimServer = require(script.Parent.Parent.Lib.AnimServer)
 local Animations = require(Shared.Config.Animations)
@@ -57,6 +58,15 @@ local function completeSale(player: Player, npc: CustomerService.Npc, weaponId: 
 	data.Stats.Earned += total
 	DataService.AddXp(player, Economy.Progression.XpPerSale)
 	DataService.Sync(player)
+	GoalsService.Record(player, "sale", 1)
+	GoalsService.Record(player, "earned", total)
+	GoalsService.Record(player, "combo", comboCount)
+	if tip > 0 then
+		GoalsService.Record(player, "tip", 1)
+	end
+	if ReplicatedStorage:GetAttribute("Phase") == "Night" then
+		GoalsService.Record(player, "saleNight", 1)
+	end
 
 	-- deal scene: handshake, the dealer counts the cash, the customer inspects the weapon, then leaves
 	local dealer = player.Character

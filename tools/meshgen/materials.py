@@ -60,6 +60,10 @@ MATERIALS = {
     "chrome": ("Metal", "#C8CCD2", 0.15, 1.0, 0, 0),
     "bark": ("Wood", "#4A3626", 0.9, 0.0, 0, 0),
     "headlight": ("Neon", "#FFF3D6", 0.2, 0.0, 3, 0),
+    # building door leaves: their own meshes so the game can swap them for doors that open
+    "door_wood": ("Wood", "#3B2616", 0.7, 0.0, 0, 0),
+    "door_glass": ("Glass", "#1E2A36", 0.08, 0.3, 0, 0),
+    "door_metal": ("Metal", "#2B2D33", 0.45, 1.0, 0, 0),
     "signal_red": ("Glass", "#3A1212", 0.2, 0.0, 0, 0),  # lit by MapBuilder (TrafficSignal tag)
     "signal_amber": ("Glass", "#3A2A10", 0.2, 0.0, 0, 0),
     "signal_green": ("Glass", "#103A22", 0.2, 0.0, 0, 0),

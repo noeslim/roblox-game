@@ -66,6 +66,192 @@ function CityParts.BuildingBody(archetype: any, color: string): { PartSpec }
 	return { part("Body", v(archetype.w, archetype.h, archetype.d), v(0, archetype.h / 2, 0), archetype.material, color, { texture = archetype.texture }) }
 end
 
+-- Building with a hollow, enterable ground floor: walls with a door opening, a floor, and the upper
+-- floors as one solid block above the interior's ceiling. Falls back to the solid body when the
+-- archetype has no interior. Also returns the door leaf (nil for an open doorway).
+export type DoorSpec = { x: number, y: number, z: number, w: number, h: number, t: number, material: string, color: string }
+
+local DOOR_LOOKS = {
+	store = { material = "Glass", color = "#A8C8D8" },
+	office = { material = "Glass", color = "#A8C8D8" },
+	warehouse = { material = "DiamondPlate", color = "#4A4E56" },
+} :: { [string]: { material: string, color: string } }
+
+function CityParts.BuildingShell(archetype: any, color: string, t: number): ({ PartSpec }, DoorSpec?)
+	local interior = archetype.interior
+	if interior == nil then
+		return CityParts.BuildingBody(archetype, color), nil
+	end
+	local w, d, h = archetype.w, archetype.d, archetype.h
+	local ih = interior.height
+	local door = archetype.door
+	local mat, tex = archetype.material, archetype.texture
+	local parts: { PartSpec } = {}
+	local function wall(name: string, size: Vec, pos: Vec)
+		table.insert(parts, part(name, size, pos, mat, color, { texture = tex }))
+	end
+	wall("Body", v(w, h - ih, d), v(0, ih + (h - ih) / 2, 0)) -- upper floors, its underside is the ceiling
+	wall("WallBack", v(w, ih, t), v(0, ih / 2, -d / 2 + t / 2))
+	wall("WallLeft", v(t, ih, d - 2 * t), v(-w / 2 + t / 2, ih / 2, 0))
+	wall("WallRight", v(t, ih, d - 2 * t), v(w / 2 - t / 2, ih / 2, 0))
+	local x0, x1 = door.x - door.w / 2, door.x + door.w / 2
+	local fz = d / 2 - t / 2
+	wall("WallFrontL", v(x0 + w / 2, ih, t), v((-w / 2 + x0) / 2, ih / 2, fz))
+	wall("WallFrontR", v(w / 2 - x1, ih, t), v((x1 + w / 2) / 2, ih / 2, fz))
+	wall("Lintel", v(door.w, ih - door.h, t), v(door.x, door.h + (ih - door.h) / 2, fz))
+	local floorLook = CityParts.InteriorFloors[interior.kind] or CityParts.InteriorFloors.lobby
+	table.insert(parts, part("InteriorFloor", v(w - 2 * t, 0.4, d - 2 * t), v(0, 0.2, 0), floorLook.material, floorLook.color, { texture = floorLook.texture }))
+	if door.open then
+		return parts, nil
+	end
+	local look = DOOR_LOOKS[interior.kind] or { material = "Wood", color = "#3B2616" }
+	return parts, { x = door.x, y = door.h / 2, z = fz, w = door.w, h = door.h, t = 0.3, material = look.material, color = look.color }
+end
+
+CityParts.InteriorFloors = {
+	store = { material = "Marble", color = "#B8B4A8" },
+	restaurant = { material = "WoodPlanks", color = "#6A4A30", texture = "planks" },
+	lobby = { material = "Slate", color = "#4E4A46" },
+	office = { material = "Marble", color = "#C8C4BC" },
+	warehouse = { material = "Concrete", color = "#5A5A5E", texture = "concrete" },
+	mansion = { material = "WoodPlanks", color = "#8A6A48", texture = "planks" },
+	squat = { material = "Concrete", color = "#4A4640", texture = "concrete" },
+} :: { [string]: { material: string, color: string, texture: string? } }
+
+-- Furniture and lights of a ground floor, in building-local coordinates (floor top at y = 0.4).
+-- Deterministic for a seed. Nothing is placed in the corridor in front of the door.
+function CityParts.Interior(archetype: any, seed: number, cfg: any): ({ PartSpec }, { LightSpec })
+	local interior = archetype.interior
+	local parts: { PartSpec } = {}
+	local lights: { LightSpec } = {}
+	if interior == nil then
+		return parts, lights
+	end
+	local t = cfg.WallThickness
+	local w, d, ih = archetype.w, archetype.d, interior.height
+	local X0, X1, Z0, Z1 = -w / 2 + t, w / 2 - t, -d / 2 + t, d / 2 - t
+	local F = 0.4
+	local state = (seed * 7919 + 17) % 2147483647
+	local function rand(): number
+		state = (state * 48271) % 2147483647
+		return state / 2147483647
+	end
+	-- a block standing on the floor: (x, z) = center, y = height of its bottom above the floor
+	local function add(name: string, sx: number, sy: number, sz: number, x: number, y: number, z: number, material: string, color: string, extra: { [string]: any }?)
+		table.insert(parts, part(name, v(sx, sy, sz), v(x, F + y + sy / 2, z), material, color, extra))
+	end
+	local function light(x: number, y: number, z: number, color: string, range: number, brightness: number)
+		table.insert(lights, { pos = v(x, F + y, z), color = color, range = range, brightness = brightness, shadows = false })
+	end
+	local function ceilingPanel(x: number, z: number, color: string)
+		add("CeilingLight", 6, 0.2, 1.2, x, ih - F - 0.2, z, "Neon", color, { canCollide = false })
+	end
+	local kind = interior.kind
+
+	if kind == "store" then
+		add("Counter", 2.5, 3.6, 9, X0 + 3, 0, 4, "Wood", "#4A3A2E")
+		add("Register", 1.2, 0.9, 1.1, X0 + 3, 3.6, 6.5, "Metal", "#2B2D33")
+		add("BackShelf", 1, 6, 9, X0 + 0.5, 0, 4, "Wood", "#2E2622")
+		local products = { "#B83A3A", "#3A6AB8", "#E0B040", "#3A9A5A", "#D86A2A", "#8A3AB8" }
+		for i, x in { -5, 0, 5 } do
+			add("Shelf", 1.6, 6, 14, x, 0, -2, "Metal", "#8A8E96")
+			for side = -1, 1, 2 do
+				for level = 0, 1 do
+					add("Products", 0.5, 1.2, 13, x + side * 0.9, 1.4 + level * 2.2, -2, "SmoothPlastic", products[(i + level + side + 6) % #products + 1], { canCollide = false })
+				end
+			end
+		end
+		add("Fridges", w - 10, 7, 1.6, -3, 0, Z0 + 0.8, "Glass", "#9FD8E8", { transparency = 0.25 })
+		add("FridgeGlow", w - 10, 0.3, 0.3, -3, 7.2, Z0 + 1.7, "Neon", "#E8F4FF", { canCollide = false })
+		ceilingPanel(-5, 0, "#E8F0FF")
+		ceilingPanel(5, 0, "#E8F0FF")
+		light(0, ih - F - 1.5, 0, "#E8F0FF", 26, 1.2)
+	elseif kind == "restaurant" then
+		for _, spot in { { -8, -5 }, { -8, 3 }, { -1, -5 }, { -1, 3 } } do
+			local x, z = spot[1], spot[2]
+			add("TableTop", 3.5, 0.3, 3.5, x, 2.6, z, "Wood", "#5A2A20")
+			add("TableLeg", 0.5, 2.6, 0.5, x, 0, z, "Metal", "#2B2D33")
+			add("Stool", 1.2, 1.8, 1.2, x - 2.6, 0, z, "Wood", "#3A2A20")
+			add("Stool", 1.2, 1.8, 1.2, x + 2.6, 0, z, "Wood", "#3A2A20")
+		end
+		add("Counter", 10, 3.6, 2.5, 6, 0, Z0 + 2.5, "Wood", "#4A1E1A")
+		add("KitchenWall", 12, 5, 0.4, 6, 3.6, Z0 + 0.4, "Brick", "#6A2A24")
+		for _, x in { -8, -1, 6 } do
+			table.insert(parts, { name = "Lantern", shape = "Ball", size = v(1.4, 1.8, 1.4), pos = v(x, ih - 2, 0), material = "Neon", color = "#E23A2A", canCollide = false })
+		end
+		light(0, ih - F - 2.5, 0, "#FFB070", 24, 1.1)
+	elseif kind == "lobby" then
+		add("Mailboxes", 1, 4, 8, X0 + 0.5, 1, 6, "DiamondPlate", "#6A6E74")
+		for i = 1, 8 do
+			add("Step", 1.5, i * 1.2, 4, 6 + i * 1.5, 0, Z0 + 2, "Concrete", "#5A5652")
+		end
+		add("CouchSeat", 6, 1.6, 2.5, -10, 0, Z0 + 3, "Fabric", "#5A4A3A")
+		add("CouchBack", 6, 2.2, 0.8, -10, 1.6, Z0 + 1.9, "Fabric", "#4A3A2E")
+		table.insert(parts, { name = "TrashBag", shape = "Ball", size = v(2, 1.8, 2), pos = v(X1 - 2, F + 0.9, Z1 - 3), material = "Plastic", color = "#141416" })
+		add("Radiator", 3, 2.2, 0.5, -3, 0.4, Z0 + 0.3, "Metal", "#8A8A82")
+		light(0, ih - F - 1.5, 0, "#FFD9A0", 22, 0.8)
+	elseif kind == "office" then
+		add("Desk", 10, 3.6, 2.5, 0, 0, -4, "Marble", "#2E2E34")
+		add("LogoWall", 14, 6, 0.4, 0, 1.5, Z0 + 0.2, "SmoothPlastic", "#1E2230")
+		add("LogoGlow", 10, 0.4, 0.2, 0, 5, Z0 + 0.5, "Neon", "#6AA8FF", { canCollide = false })
+		for _, x in { -10, 10 } do
+			if math.abs(x) < X1 - 3 then
+				add("Elevator", 4, 7.5, 0.3, x, 0, Z0 + 0.15, "Metal", "#8C9099")
+				add("ElevatorLight", 1, 0.4, 0.2, x, 8, Z0 + 0.3, "Neon", "#FFB020", { canCollide = false })
+				add("Bench", 5, 1.5, 1.5, x, 0, 6, "Wood", "#6B4A2E")
+			end
+		end
+		for _, x in { X0 + 3, X1 - 3 } do
+			table.insert(parts, { name = "Pot", shape = "Cylinder", size = v(2, 1.6, 1.6), pos = v(x, F + 1, Z1 - 4), rotZ = 90, material = "Slate", color = "#3A3A3E" })
+			table.insert(parts, { name = "Plant", shape = "Ball", size = v(3, 3.5, 3), pos = v(x, F + 3.5, Z1 - 4), material = "Grass", color = "#2E6B30", canCollide = false })
+		end
+		ceilingPanel(-8, 0, "#F0F4FF")
+		ceilingPanel(8, 0, "#F0F4FF")
+		light(0, ih - F - 1.5, 0, "#F0F4FF", 30, 1.3)
+	elseif kind == "warehouse" then
+		for _, x in { -24, -16, -8, 8, 16, 24 } do
+			for _, z in { -14, -4, 6 } do
+				local stack = 1 + math.floor(rand() * 3)
+				if rand() < 0.8 then
+					add("Crates", 4, 4 * stack, 4, x + (rand() - 0.5) * 2, 0, z + (rand() - 0.5) * 2, "WoodPlanks", "#8A6238")
+				end
+			end
+		end
+		for _, x in { X0 + 1, X1 - 1 } do
+			add("Rack", 2, 12, 20, x, 0, 0, "Metal", "#4A5A7A")
+		end
+		for _, x in { -15, 15 } do
+			add("HangingLamp", 2, 0.4, 2, x, 17, 0, "Neon", "#FFE2B0", { canCollide = false })
+			light(x, 16, 0, "#FFE2B0", 40, 1.1)
+		end
+	elseif kind == "mansion" then
+		add("Rug", 16, 0.1, 10, 0, 0, -2, "Fabric", "#6A2A2A", { canCollide = false })
+		add("SofaSeat", 10, 1.6, 3, 0, 0, -8, "Fabric", "#D8D0C0")
+		add("SofaBack", 10, 2.2, 0.8, 0, 1.6, -9.4, "Fabric", "#C8C0B0")
+		for _, x in { -8, 8 } do
+			add("Armchair", 3.5, 1.6, 3.5, x, 0, -2, "Fabric", "#3A3A44")
+		end
+		add("CoffeeTable", 5, 1.2, 3, 0, 0, -3, "Wood", "#3B2616")
+		add("Fireplace", 8, 6, 1.5, 0, 0, Z0 + 0.75, "Brick", "#5A4A40")
+		add("Fire", 4, 2.5, 0.3, 0, 0.5, Z0 + 1.6, "Neon", "#FF8A2B", { canCollide = false })
+		add("Bar", 2.5, 3.6, 10, X1 - 6, 0, -8, "Marble", "#2E2E34")
+		table.insert(parts, { name = "Chandelier", shape = "Ball", size = v(1.8, 1.8, 1.8), pos = v(0, ih - 1.5, -2), material = "Neon", color = "#FFE8C0", canCollide = false })
+		light(0, ih - F - 2, -2, "#FFE0B0", 30, 1.2)
+		light(0, 1.5, Z0 + 2.5, "#FF8A2B", 14, 1.5)
+	elseif kind == "squat" then
+		add("Mattress", 7, 0.8, 4, X0 + 5, 0, Z0 + 4, "Fabric", "#6A6250")
+		add("OldCouch", 6, 1.8, 2.5, X1 - 6, 0, Z0 + 3, "Fabric", "#4A3E30")
+		table.insert(parts, { name = "Barrel", shape = "Cylinder", size = v(3, 2.2, 2.2), pos = v(8, F + 1.5, -6), rotZ = 90, material = "CorrodedMetal", color = "#5A3A28" })
+		add("Embers", 1.6, 0.2, 1.6, 8, 3, -6, "Neon", "#FF6A1A", { canCollide = false })
+		for _ = 1, 6 do
+			local x, z = X0 + 2 + rand() * (w - 2 * t - 4), Z0 + 2 + rand() * (d - 2 * t - 4) * 0.6
+			add("Rubble", 1 + rand() * 2.5, 0.6 + rand(), 1 + rand() * 2.5, x, 0, z, "Concrete", "#55504A", { rotY = rand() * 90 })
+		end
+		light(8, 4, -6, "#FF8A3A", 20, 1.4)
+	end
+	return parts, lights
+end
+
 local HOUSE_SIDING = { "#6E7F86", "#8A7A66", "#7A6A5A", "#5E6E5A", "#8A8A82", "#6A5E70" }
 
 -- Trap house "shack" structure, in plot-local coordinates. Returns parts and lights.

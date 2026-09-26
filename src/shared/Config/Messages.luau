@@ -38,6 +38,7 @@ Messages.Errors = {
 	UnknownCustomer = "That customer left.",
 	NotYourCustomer = "That's not your customer.",
 	NotReady = "That customer isn't ready.",
+	AlreadyClaimed = "Already claimed today. Come back tomorrow.",
 	TooFar = "Get closer to the customer.",
 	NoCounterOffer = "There's no offer to accept.",
 }
@@ -50,6 +51,19 @@ function Messages.ForError(code: any): string
 	local key = string.match(code, "^([^:]+)") or code
 	return Messages.Errors[key] or code
 end
+
+-- Daily streak and contracts (GoalsService / GoalsController)
+Messages.Goals = {
+	ContractDone = "Contract done: %s  +$%d",
+	AllDone = "All contracts done! Bonus +$%d",
+	DailyClaimed = "Day %d streak  +$%d",
+	Title = "CONTRACTS",
+	AllDoneTitle = "ALL DONE - new ones tomorrow",
+	DailyTitle = "DAILY STREAK",
+	DailySubtitle = "Come back every day. Miss one and the streak starts over.",
+	Claim = "CLAIM $%d",
+	Day = "DAY %d",
+}
 
 Messages.PersonalityNames = {
 	Rushed = "In a hurry",

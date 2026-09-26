@@ -315,6 +315,39 @@ end
 
 local SIGN_HEIGHT = { shop = 12, chinatown = 26, office = 12, tower = 12, warehouse = 21, apartment = 10 }
 
+-- Furnished ground floor (Logic/CityParts.Interior): small pieces cast no shadow (cheaper).
+local function buildInterior(a: City.Archetype, model: Model, cf: CFrame, seed: number)
+	local interior = Instance.new("Model")
+	interior.Name = "Interior"
+	local parts, lights = CityParts.Interior(a, seed, City.Interiors)
+	for _, spec in parts do
+		local p = makePart(spec, interior, cf)
+		p.CastShadow = false
+	end
+	for i, l in lights do
+		local holder = makePart({ name = "Light" .. i, shape = "Block", size = { x = 0.2, y = 0.2, z = 0.2 }, pos = l.pos, material = "SmoothPlastic", color = "#FFFFFF", transparency = 1, canCollide = false }, interior, cf)
+		holder.CanQuery = false
+		local light = Instance.new("PointLight")
+		light.Color = hex(l.color)
+		light.Range = l.range
+		light.Brightness = l.brightness
+		light.Shadows = l.shadows
+		light.Parent = holder
+	end
+	interior.Parent = model
+end
+
+-- A door leaf in the doorway, hinged on its left edge; clients swing it open (DoorController).
+local function buildDoor(spec: CityParts.DoorSpec, model: Model, cf: CFrame)
+	local door = makePart({ name = "Door", shape = "Block", size = { x = spec.w, y = spec.h, z = spec.t }, pos = { x = spec.x, y = spec.y, z = spec.z }, material = spec.material, color = spec.color }, model, cf)
+	if spec.material == "Glass" then
+		door.Transparency = 0.35
+	end
+	door:SetAttribute("ClosedCFrame", door.CFrame)
+	door:SetAttribute("HingeOffset", -spec.w / 2)
+	CollectionService:AddTag(door, "AutoDoor")
+end
+
 local function buildBuilding(b: CityLayout.Building, parent: Instance, origin: CFrame, groundTop: number, rng: Random)
 	local a = City.Archetypes[b.archetype]
 	local model = Instance.new("Model")
@@ -327,10 +360,36 @@ local function buildBuilding(b: CityLayout.Building, parent: Instance, origin: C
 		local _, size = placePrefab(prefab, model, cf, a.w, a.d)
 		front, signTop = size.Z / 2, size.Y
 	else
-		for _, spec in CityParts.BuildingBody(a, b.color) do
-			body = makePart(spec, model, cf)
+		local I = City.Interiors
+		local furnished = I.Enabled and a.interior ~= nil
+		local shell, door
+		if furnished then
+			shell, door = CityParts.BuildingShell(a, b.color, I.WallThickness)
+		else
+			shell = CityParts.BuildingBody(a, b.color)
 		end
-		tagMeshes(ModelFactory.PlaceLibraryModel("bld_" .. b.archetype, model, cf, false), rng)
+		for _, spec in shell do
+			local p = makePart(spec, model, cf)
+			if spec.name == "Body" then
+				body = p
+			end
+		end
+		local meshes = ModelFactory.PlaceLibraryModel("bld_" .. b.archetype, model, cf, false)
+		if furnished then
+			-- the facade's closed door leaf gives way to a door that opens (DoorController)
+			for i = #meshes, 1, -1 do
+				local m = meshes[i]:GetAttribute("MeshMaterial")
+				if type(m) == "string" and string.sub(m, 1, 5) == "door_" then
+					meshes[i]:Destroy()
+					table.remove(meshes, i)
+				end
+			end
+			buildInterior(a, model, cf, math.floor(b.x * 7 + b.z * 13))
+			if door then
+				buildDoor(door, model, cf)
+			end
+		end
+		tagMeshes(meshes, rng)
 	end
 	if b.sign then
 		local width = math.min(a.w * 0.6, 18)
@@ -678,7 +737,7 @@ end
 -- Build ---------------------------------------------------------------------------------------------------
 
 -- Printed at every build: tells whether Studio runs the latest code (Rojo connected).
-MapBuilder.VERSION = "2026-09-26e"
+MapBuilder.VERSION = "2026-09-26f"
 
 function MapBuilder.Build(): (Instance, Instance)
 	local started = os.clock()
