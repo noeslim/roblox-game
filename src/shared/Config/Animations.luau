@@ -45,7 +45,18 @@ Animations.Custom = {
 	ShakeHead = "",
 	Shrug = "",
 	Nod = "",
+	LookAround = "",
+	CheckPhone = "",
+	ArmsCrossed = "",
+	ShiftWeight = "",
 } :: { [string]: string }
+
+-- Customers waiting in line play a random fidget now and then (AnimServer)
+Animations.Npc = {
+	Fidgets = { "LookAround", "CheckPhone", "ArmsCrossed", "ShiftWeight" },
+	FidgetMinSeconds = 5,
+	FidgetMaxSeconds = 11,
+}
 
 -- Timing of the deal scene (seconds)
 Animations.Deal = {
@@ -139,6 +150,49 @@ Animations.Procedural = {
 			{ t = 0.3, joints = { RightShoulder = a(20, 0, 25), LeftShoulder = a(20, 0, -25), RightElbow = a(60), LeftElbow = a(60), Neck = a(0, 0, 12) } },
 			{ t = 0.7, joints = { RightShoulder = a(20, 0, 25), LeftShoulder = a(20, 0, -25), RightElbow = a(60), LeftElbow = a(60), Neck = a(0, 0, 12) } },
 			{ t = 1.0, joints = { RightShoulder = a(0), LeftShoulder = a(0), RightElbow = a(0), LeftElbow = a(0), Neck = a(0) } },
+		},
+	},
+	-- Idle fidgets (customers waiting)
+	LookAround = {
+		duration = 3.2,
+		fade = 0.4,
+		keys = {
+			{ t = 0.0, joints = { Neck = a(0, 0), Waist = a(0, 0) } },
+			{ t = 0.8, joints = { Neck = a(-4, 38), Waist = a(0, 10) } },
+			{ t = 1.5, joints = { Neck = a(-4, 36), Waist = a(0, 8) } },
+			{ t = 2.3, joints = { Neck = a(-2, -34), Waist = a(0, -8) } },
+			{ t = 3.2, joints = { Neck = a(0, 0), Waist = a(0, 0) } },
+		},
+	},
+	CheckPhone = {
+		duration = 4.0,
+		fade = 0.35,
+		keys = {
+			{ t = 0.0, joints = { RightShoulder = a(0), RightElbow = a(0), RightWrist = a(0), Neck = a(0) } },
+			{ t = 0.5, joints = { RightShoulder = a(38, 0, -12), RightElbow = a(95), RightWrist = a(-15), Neck = a(-26) } },
+			{ t = 2.0, joints = { RightShoulder = a(40, 0, -12), RightElbow = a(92), RightWrist = a(-12), Neck = a(-24, 4) } },
+			{ t = 3.4, joints = { RightShoulder = a(38, 0, -12), RightElbow = a(95), RightWrist = a(-15), Neck = a(-26, -3) } },
+			{ t = 4.0, joints = { RightShoulder = a(0), RightElbow = a(0), RightWrist = a(0), Neck = a(0) } },
+		},
+	},
+	ArmsCrossed = {
+		duration = 4.5,
+		fade = 0.4,
+		keys = {
+			{ t = 0.0, joints = { RightShoulder = a(0), LeftShoulder = a(0), RightElbow = a(0), LeftElbow = a(0), Neck = a(0) } },
+			{ t = 0.5, joints = { RightShoulder = a(30, 0, -28), LeftShoulder = a(34, 0, 28), RightElbow = a(105), LeftElbow = a(100), Neck = a(-4) } },
+			{ t = 4.0, joints = { RightShoulder = a(30, 0, -28), LeftShoulder = a(34, 0, 28), RightElbow = a(105), LeftElbow = a(100), Neck = a(-2, 8) } },
+			{ t = 4.5, joints = { RightShoulder = a(0), LeftShoulder = a(0), RightElbow = a(0), LeftElbow = a(0), Neck = a(0) } },
+		},
+	},
+	ShiftWeight = {
+		duration = 2.6,
+		fade = 0.4,
+		keys = {
+			{ t = 0.0, joints = { Root = a(0, 0, 0), Waist = a(0, 0, 0), Neck = a(0) } },
+			{ t = 0.9, joints = { Root = a(0, 0, 4), Waist = a(0, 0, -5), Neck = a(0, 0, 3) } },
+			{ t = 1.8, joints = { Root = a(0, 0, 4), Waist = a(0, 0, -5), Neck = a(0, 0, 3) } },
+			{ t = 2.6, joints = { Root = a(0, 0, 0), Waist = a(0, 0, 0), Neck = a(0) } },
 		},
 	},
 	Nod = {

@@ -11,7 +11,7 @@ return {
 		-- no haze/glare: they turn the whole street red at sunset
 		Atmosphere = { Density = 0.25, Haze = 0, Glare = 0, Color = "#9FA8C8", Decay = "#3A3F5C" },
 		Bloom = { Intensity = 0.25, Size = 18, Threshold = 2.2 }, -- only bright neon glows
-		ColorCorrection = { Saturation = 0.05, Contrast = 0.08, TintColor = "#FFFFFF" },
+		ColorCorrection = { Saturation = 0, Contrast = 0, TintColor = "#FFFFFF" }, -- the grade is Config/Mood (client)
 		-- our own sky (the place's Sky and effects are set aside at run time, see CityService)
 		Sky = { StarCount = 2500, SunAngularSize = 12, MoonAngularSize = 9 },
 		-- lit windows at night (Neon): keep it dim or whole facades glow

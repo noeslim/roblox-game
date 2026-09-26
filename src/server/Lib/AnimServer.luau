@@ -41,8 +41,23 @@ local function load(humanoid: Humanoid, id: string, priority: Enum.AnimationPrio
 	return track
 end
 
--- Idle + walk for a server-controlled NPC (call after it is parented to workspace).
+-- Idle + walk for a server-controlled NPC (call after it is parented to workspace). While it stands
+-- still it plays a random fidget now and then (Config/Animations.Npc).
 function AnimServer.SetupNpc(humanoid: Humanoid)
+	local model = humanoid.Parent
+	if model and model:IsA("Model") then
+		task.spawn(function()
+			local rng = Random.new()
+			local N = Animations.Npc
+			while humanoid.Parent and model.Parent do
+				task.wait(rng:NextNumber(N.FidgetMinSeconds, N.FidgetMaxSeconds))
+				local busyUntil = (model:GetAttribute("PoseUntil") :: number?) or 0
+				if model.Parent and humanoid.MoveDirection.Magnitude < 0.1 and os.clock() > busyUntil and humanoid.Health > 0 then
+					AnimServer.Play(model, N.Fidgets[rng:NextInteger(1, #N.Fidgets)])
+				end
+			end
+		end)
+	end
 	local idle = load(humanoid, Animations.Locomotion.Idle, Enum.AnimationPriority.Idle, true)
 	local walk = load(humanoid, Animations.Locomotion.Walk, Enum.AnimationPriority.Movement, true)
 	if idle then
@@ -99,7 +114,10 @@ function AnimServer.Play(model: Model?, name: string)
 			return
 		end
 	end
-	if Animations.Procedural[name] then
+	local def = Animations.Procedural[name]
+	if def then
+		-- fidgets wait until this one is over
+		model:SetAttribute("PoseUntil", os.clock() + def.duration)
 		ServerNet.FireAllClients("PlayPose", model, name)
 	end
 end

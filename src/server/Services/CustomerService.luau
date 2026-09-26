@@ -3,6 +3,7 @@
 -- wait with a patience bar, then leave (happy or angry). Buying decisions live in Logic/Customer
 -- and the deal itself in SaleService.
 local PhysicsService = game:GetService("PhysicsService")
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -485,6 +486,7 @@ local function spawnCustomer(stash: Stash)
 			end
 		end
 		model:SetAttribute("CustomerId", id)
+		CollectionService:AddTag(model, "Npc") -- body dynamics on the clients (BodyController)
 		model:SetAttribute("OwnerUserId", stash.owner.UserId)
 		model:SetAttribute("Personality", data.personality)
 		model:PivotTo(CFrame.new(spawnPos + Vector3.new(0, 3, 0)))

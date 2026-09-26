@@ -11,5 +11,6 @@ return {
 		RequestBuyPart = { capacity = 10, refillPerSecond = 5 },
 		RequestSetPrice = { capacity = 20, refillPerSecond = 10 },
 		RequestSell = { capacity = 5, refillPerSecond = 2 },
+		LookAt = { capacity = 10, refillPerSecond = 8 },
 	} :: { [string]: { capacity: number, refillPerSecond: number } },
 }

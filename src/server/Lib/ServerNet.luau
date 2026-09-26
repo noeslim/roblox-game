@@ -67,6 +67,26 @@ function ServerNet.Handle(name: string, handler: (player: Player, ...any) -> (bo
 	end
 end
 
+-- Client -> server RemoteEvent, rate-limited like the functions (extra calls are dropped).
+function ServerNet.OnEvent(name: string, handler: (player: Player, ...any) -> ())
+	ServerNet.Setup()
+	assert(table.find(Net.Events, name), "unknown remote event " .. name)
+	local rate = NetworkConfig.PerRemote[name] or NetworkConfig.Default
+	local limiter = RateLimiter.new(rate.capacity, rate.refillPerSecond)
+	limiters[name] = limiter
+	Net.GetEvent(name).OnServerEvent:Connect(function(player: Player, ...: any)
+		if not limiter:Allow(player, os.clock()) then
+			return
+		end
+		local args = table.pack(...)
+		xpcall(function()
+			handler(player, table.unpack(args, 1, args.n))
+		end, function(err)
+			warn(("[ServerNet] %s failed for %s: %s"):format(name, player.Name, tostring(err)))
+		end)
+	end)
+end
+
 function ServerNet.FireClient(name: string, player: Player, ...: any)
 	ServerNet.Setup()
 	Net.GetEvent(name):FireClient(player, ...)
