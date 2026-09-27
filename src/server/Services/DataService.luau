@@ -41,7 +41,8 @@ local function publish(player: Player, data: ProfileSchema.ProfileData)
 	player:SetAttribute("XpToNext", Progression.XpToNext(data.Level, Economy.Progression))
 end
 
--- Studio only: from the command bar (Server view), `game.Players.NAME:SetAttribute("DebugGrant", 100)`.
+-- Studio only: from the command bar (Server view), `game.Players.NAME:SetAttribute("DebugGrant", 100)`
+-- (money), "DebugGiveParts" (every part) and "DebugLevel" (dealer level).
 local function watchDebugGrant(player: Player, ledger: Ledger.Ledger)
 	if not RunService:IsStudio() then
 		return
@@ -51,6 +52,30 @@ local function watchDebugGrant(player: Player, ledger: Ledger.Ledger)
 		if type(amount) == "number" and amount > 0 then
 			ledger:Deposit(math.floor(amount), "debug")
 			player:SetAttribute("DebugGrant", nil)
+		end
+	end)
+	-- `SetAttribute("DebugGiveParts", 10)`: 10 more of every part of the catalogue
+	player:GetAttributeChangedSignal("DebugGiveParts"):Connect(function()
+		local amount = player:GetAttribute("DebugGiveParts")
+		local data = DataService.GetData(player)
+		if type(amount) == "number" and amount > 0 and data then
+			for id in Parts do
+				data.Parts[id] = math.min((data.Parts[id] or 0) + math.floor(amount), Economy.Profile.MaxPartStack)
+			end
+			player:SetAttribute("DebugGiveParts", nil)
+			DataService.Sync(player)
+		end
+	end)
+	-- `SetAttribute("DebugLevel", 5)`: sets the dealer level (raids start at level 5)
+	player:GetAttributeChangedSignal("DebugLevel"):Connect(function()
+		local level = player:GetAttribute("DebugLevel")
+		local data = DataService.GetData(player)
+		if type(level) == "number" and data then
+			data.Level = math.clamp(math.floor(level), 1, Economy.Profile.MaxLevel)
+			data.Xp = 0
+			player:SetAttribute("DebugLevel", nil)
+			publish(player, data)
+			DataService.Sync(player)
 		end
 	end)
 end

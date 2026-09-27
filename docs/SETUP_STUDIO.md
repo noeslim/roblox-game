@@ -111,6 +111,15 @@ Si quelque chose ne marche pas : copie les lignes **rouges** d'Output et envoie-
    Le compteur passe à **$ 750**. (Cette commande ne marche que dans Studio.)
 3. **Stop**, puis **Play** à nouveau : tu dois retrouver **$ 750**. ✅ La sauvegarde marche.
 
+### Se donner tous les objets (Studio seulement)
+
+En **Server**, dans la Command Bar (remplace `TonPseudo`) :
+```lua
+game.Players.TonPseudo:SetAttribute("DebugGrant", 100000)   -- argent (les meubles s'achètent avec)
+game.Players.TonPseudo:SetAttribute("DebugGiveParts", 10)   -- 10 de chaque pièce d'arme du jeu
+game.Players.TonPseudo:SetAttribute("DebugLevel", 10)       -- niveau du dealer
+```
+
 ### Tester une descente de police
 
 En **Server**, dans la Command Bar (remplace `TonPseudo`) :
