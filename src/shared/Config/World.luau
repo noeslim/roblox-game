@@ -56,7 +56,7 @@ return {
 	-- Ambient sounds: paste ids from the Creator Store (Toolbox > Audio), e.g. "rbxassetid://123".
 	-- Empty = no sound. Search: "city ambience loop", "rain loop", "police siren distant", "dog bark".
 	Sounds = {
-		CityLoop = "",
+		CityLoop = "", -- street ambience wherever Config/Soundscape.Ambience has nothing
 		RainLoop = "",
 		Sirens = {} :: { string },
 		SirenIntervalMin = 40,

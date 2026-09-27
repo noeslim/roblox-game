@@ -48,7 +48,7 @@ Légende coût : 🟢 petit · 🟡 moyen · 🔴 gros (mérite Opus)
 - ✅ 2.1 🟡 Cycle jour/nuit (`Logic/DayNight`) + éclairage, pluie, néons.
 - ✅ 2.2 🔴 Chaleur et descentes (à valider dans Studio) : jauge sauvegardée, `RaidService`, compte à rebours, compartiments secrets (catégorie Secret), inspecteurs qui fouillent, saisie + amende, rapport.
 - ✅ 2.3 🟡 Marché noir de nuit avec prix dynamiques (`Logic/Market`, à valider dans Studio) : stock limité par nuit, prix qui montent à chaque achat, contrebande ×1,5 la nuit, set recherché chaque nuit (+25 %).
-- 2.4 🟢 Musique et ambiance sonore par zone.
+- ✅ 2.4 🟢 Musique et ambiance sonore par zone (à remplir avec des sons de la Toolbox : `Config/Soundscape`).
 
 ## Phase 3 — La guerre
 - 3.1 🔴 Système d'armes (partir d'un kit FPS open source, l'adapter aux stats de `WeaponCrafting`).

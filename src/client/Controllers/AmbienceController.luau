@@ -1,6 +1,6 @@
 --!strict
 -- Client-side atmosphere: rain around the camera, wet shiny ground, flickering neon signs,
--- fire light flicker, traffic lights, city / rain loops and distant sirens. Settings: Config/World (Weather, Sounds).
+-- fire light flicker, traffic lights, rain loop and distant sirens. Settings: Config/World (Weather, Sounds).
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -187,10 +187,7 @@ end
 function AmbienceController:Start()
 	buildRain()
 	rainSound = makeLoop(World.Sounds.RainLoop, World.Sounds.Volume)
-	local city = makeLoop(World.Sounds.CityLoop, World.Sounds.Volume)
-	if city then
-		city:Play()
-	end
+	-- the city loop is played by SoundscapeController (ambience by zone)
 
 	ReplicatedStorage:GetAttributeChangedSignal("Raining"):Connect(function()
 		setRain(ReplicatedStorage:GetAttribute("Raining") == true)
