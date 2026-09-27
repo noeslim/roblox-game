@@ -30,6 +30,16 @@ return function(t)
 		t.eq(spots[2].layer, 2)
 	end)
 
+	t.test("piles fill a whole layer (every slot of every crate) before stacking", function()
+		local spots = StockLayout.Assign(items(0, 7), { { kind = "pile", slots = 3 }, { kind = "pile", slots = 3 } }, 2)
+		for i = 1, 6 do
+			t.eq(spots[i].layer, 1)
+		end
+		t.eq(spots[7].layer, 2)
+		t.eq(spots[7].place, 1)
+		t.eq(spots[7].slot, 1)
+	end)
+
 	t.test("nowhere to show: everything overflows", function()
 		local spots, overflow = StockLayout.Assign(items(2, 2), {}, 4)
 		t.eq(#spots, 0)

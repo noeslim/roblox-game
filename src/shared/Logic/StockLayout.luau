@@ -23,14 +23,23 @@ function StockLayout.Assign(items: { Item }, places: { Place }, maxLayers: numbe
 	local spots: { Spot } = {}
 	local overflow = 0
 
+	-- the first free slot of an accepted place, filling a whole layer before the next one
 	local function take(item: Item, accept: (Place) -> boolean, cap: (Place) -> number): boolean
-		for i, p in places do
+		local top = 0
+		for _, p in places do
 			if accept(p) then
-				for s = 1, p.slots do
-					if used[i][s] < cap(p) then
-						used[i][s] += 1
-						table.insert(spots, { item = item, place = i, slot = s, layer = used[i][s] })
-						return true
+				top = math.max(top, cap(p))
+			end
+		end
+		for layer = 1, top do
+			for i, p in places do
+				if accept(p) and layer <= cap(p) then
+					for s = 1, p.slots do
+						if used[i][s] == layer - 1 then
+							used[i][s] = layer
+							table.insert(spots, { item = item, place = i, slot = s, layer = layer })
+							return true
+						end
 					end
 				end
 			end

@@ -133,6 +133,13 @@ local function hasCompartment(): boolean
 	return false
 end
 
+local function warningHint(): string
+	if (tonumber(player:GetAttribute("InSight")) or 0) == 0 then
+		return Messages.Raid.CleanHint
+	end
+	return if hasCompartment() then Messages.Raid.Hint else Messages.Raid.NoCompartmentHint
+end
+
 local function buildRaidOverlay()
 	local gui = UI.Screen("RaidHud", 35)
 	gui.IgnoreGuiInset = true
@@ -150,9 +157,9 @@ local function buildRaidOverlay()
 		})
 		table.insert(edges, f)
 	end
-	local banner = UI.new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 70), Size = UDim2.fromOffset(460, 84), BackgroundTransparency = 1, Parent = gui })
+	local banner = UI.new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 70), Size = UDim2.fromOffset(480, 96), BackgroundTransparency = 1, Parent = gui })
 	local title = UI.Label({ Size = UDim2.new(1, 0, 0, 44), Font = UI.Theme.FontBlack, TextSize = 40, TextColor3 = UI.Theme.Danger, TextStrokeTransparency = 0.3, Parent = banner })
-	local hint = UI.Label({ Position = UDim2.fromOffset(0, 48), Size = UDim2.new(1, 0, 0, 22), TextSize = 17, TextStrokeTransparency = 0.4, TextWrapped = true, Parent = banner })
+	local hint = UI.Label({ Position = UDim2.fromOffset(0, 48), Size = UDim2.new(1, 0, 0, 44), TextSize = 17, TextStrokeTransparency = 0.4, TextWrapped = true, Parent = banner })
 
 	local siren: Sound? = nil
 	local phaseShown: string? = nil
@@ -163,7 +170,7 @@ local function buildRaidOverlay()
 			phaseShown = phase :: string?
 			gui.Enabled = phase ~= nil
 			if phase == "Warning" then
-				hint.Text = if hasCompartment() then Messages.Raid.Hint else Messages.Raid.NoCompartmentHint
+				hint.Text = warningHint()
 				if siren == nil then
 					siren = sound(SOUNDS.Siren, gui, true)
 				end
@@ -182,6 +189,9 @@ local function buildRaidOverlay()
 		end
 		if phase == nil then
 			return
+		end
+		if phase == "Warning" then
+			hint.Text = warningHint()
 		end
 		local left = math.max(0, math.ceil((tonumber(player:GetAttribute("RaidEndsAt")) or 0) - workspace:GetServerTimeNow()))
 		title.Text = if phase == "Warning" then ("%s  %d"):format(Messages.Raid.Warning, left) else ("SEARCH  %d"):format(left)

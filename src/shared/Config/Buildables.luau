@@ -126,7 +126,7 @@ add({
 add({
 	id = "storage_crate", name = "Supply Crate", category = "Business", role = "Storage", price = 30,
 	size = v(3, 3, 3),
-	stock = { kind = "pile", slots = { v(0, 1.5, 0), v(0, -1.5, 2.4) } }, -- on top, then on the floor in front
+	stock = { kind = "pile", slots = { v(0, 1.5, -0.95), v(0, 1.5, 0), v(0, 1.5, 0.95) } }, -- three rows on top
 	parts = {
 		{ size = v(2.9, 2.9, 2.9), pos = v(0, 0, 0), color = "#7A5230", material = "WoodPlanks" },
 		{ size = v(3, 0.3, 3), pos = v(0, 0.9, 0), color = "#3C3C42", material = "Metal" },

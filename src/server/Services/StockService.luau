@@ -194,8 +194,7 @@ function StockService.Refresh(player: Player)
 			local key = spot.place .. ":" .. spot.slot
 			local bottom = heights[key] or 0
 			heights[key] = bottom + height + 0.02
-			local turn = CFrame.Angles(0, math.rad(S.LayerTurn * (spot.layer - 1)), 0)
-			cf = base * CFrame.new(0, bottom + height / 2, 0) * turn
+			cf = base * CFrame.new(0, bottom + height / 2, 0)
 			if item.kind == "weapon" then
 				cf *= CFrame.Angles(math.rad(90), 0, 0)
 			end
