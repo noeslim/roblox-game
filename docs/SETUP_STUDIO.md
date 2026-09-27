@@ -111,6 +111,15 @@ Si quelque chose ne marche pas : copie les lignes **rouges** d'Output et envoie-
    Le compteur passe à **$ 750**. (Cette commande ne marche que dans Studio.)
 3. **Stop**, puis **Play** à nouveau : tu dois retrouver **$ 750**. ✅ La sauvegarde marche.
 
+### Tester une descente de police
+
+En **Server**, dans la Command Bar (remplace `TonPseudo`) :
+```lua
+game.Players.TonPseudo:SetAttribute("DebugHeat", 70)    -- règle la jauge de chaleur (0 à 100)
+game.Players.TonPseudo:SetAttribute("DebugRaid", true)  -- descente tout de suite
+```
+Sans `DebugRaid`, une descente n'arrive qu'au niveau 5 et plus, quand la jauge atteint 85. Pendant les 20 s d'alerte, maintiens **E** sur un compartiment secret (mode construction → onglet **SECRET**) pour y cacher ta contrebande. Studio seulement.
+
 ### Passer à la nuit (ou au jour) tout de suite
 
 En **Server**, dans la Command Bar :

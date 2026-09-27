@@ -111,6 +111,26 @@ Messages.CustomerLines = {
 	Thanks = { "Pleasure doing business.", "Nice piece. Later.", "Respect.", "I'll tell my crew." },
 	Angry = { "Too slow. I'm out.", "Waste of my time.", "Forget it." },
 	Declined = { "Your loss.", "Fine. Keep it." },
+	Cops = { "Cops! I'm out.", "Nah, not with sirens around.", "Too hot here. Later." },
+}
+
+Messages.Raid = {
+	Patrol = "A patrol car is cruising your block. Keep it low.",
+	Investigation = "An inspector is asking around about your place.",
+	Warning = "RAID!",
+	Hint = "Hold E on a secret compartment to hide your contraband",
+	NoCompartmentHint = "No secret compartment: everything in sight will be seized",
+	Search = "The inspectors are searching your stash...",
+	Hidden = "Hid %d item(s) in the %s.",
+	NothingToHide = "No contraband left in sight.",
+	NoRoom = "Your secret compartments are full.",
+	TooLate = "Too late, they are already searching.",
+	Fled = "You left during a raid: the inspectors searched your stash without you.",
+	ReportTitle = "RAID REPORT",
+	Clean = "They found nothing. Clean.",
+	Seized = "Seized",
+	Saved = "Stayed hidden: %d",
+	Fine = "Fine: %s",
 }
 
 return Messages

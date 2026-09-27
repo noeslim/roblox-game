@@ -59,6 +59,7 @@ type Stash = {
 
 local stashes: { [Player]: Stash } = {}
 local npcsById: { [string]: Npc } = {}
+local complaintCallbacks: { (Player) -> () } = {}
 local rng = Random.new()
 local nextId = 0
 
@@ -146,10 +147,10 @@ local function blockyFallback(shirt: Color3, skin: Color3): Model
 	return model
 end
 
-local function makeCustomerModel(): Model
-	local skin = hex(Visual.CustomerSkinColors[rng:NextInteger(1, #Visual.CustomerSkinColors)])
-	local shirt = hex(Visual.CustomerShirtColors[rng:NextInteger(1, #Visual.CustomerShirtColors)])
-	local pants = hex(Visual.CustomerPantsColors[rng:NextInteger(1, #Visual.CustomerPantsColors)])
+local function makeCustomerModel(skinColor: Color3?, shirtColor: Color3?, pantsColor: Color3?): Model
+	local skin = skinColor or hex(Visual.CustomerSkinColors[rng:NextInteger(1, #Visual.CustomerSkinColors)])
+	local shirt = shirtColor or hex(Visual.CustomerShirtColors[rng:NextInteger(1, #Visual.CustomerShirtColors)])
+	local pants = pantsColor or hex(Visual.CustomerPantsColors[rng:NextInteger(1, #Visual.CustomerPantsColors)])
 	local desc = Instance.new("HumanoidDescription")
 	desc.HeadColor = skin
 	desc.LeftArmColor = skin
@@ -355,6 +356,58 @@ function CustomerService.Dismiss(npc: Npc, lineKey: string?, leaveDelay: number?
 	if lineKey then
 		CustomerService.SayLine(npc, lineKey)
 	end
+end
+
+-- Every customer of `owner` leaves now (a raid starts).
+function CustomerService.DismissAll(owner: Player, lineKey: string?)
+	local stash = stashes[owner]
+	if stash == nil then
+		return
+	end
+	for _, npc in stash.npcs do
+		CustomerService.Dismiss(npc, lineKey)
+	end
+end
+
+-- Called with the owner each time a customer leaves angry (too slow).
+function CustomerService.OnComplaint(callback: (Player) -> ())
+	table.insert(complaintCallbacks, callback)
+end
+
+-- Path from the street into `owner`'s basement (front door, top and bottom of the stairs).
+function CustomerService.RouteIn(owner: Player): { Vector3 }
+	local stash = stashes[owner]
+	return if stash then routeIn(stash) else {}
+end
+
+-- A ready-to-walk NPC body (R15 from the given colors, blocky if that fails), parented to `parent`,
+-- animated by the server, walking through players. Used for the raid inspectors.
+function CustomerService.MakeNpc(name: string, skin: Color3, shirt: Color3, pants: Color3, parent: Instance): (Model?, Humanoid?, BasePart?)
+	local model = makeCustomerModel(skin, shirt, pants)
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	local root = model:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if humanoid == nil or root == nil then
+		model:Destroy()
+		return nil, nil, nil
+	end
+	model.Name = name
+	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.CollisionGroup = CUSTOMER_GROUP
+		end
+	end
+	CollectionService:AddTag(model, "Npc")
+	model.Parent = parent
+	pcall(function()
+		root:SetNetworkOwner(nil)
+	end)
+	local animate = model:FindFirstChild("Animate")
+	if animate then
+		animate:Destroy()
+	end
+	AnimServer.SetupNpc(humanoid)
+	return model, humanoid, root
 end
 
 function CustomerService.GetCustomer(id: any): Npc?
@@ -567,7 +620,8 @@ local function tick(dt: number)
 		if stash.counter == nil or stash.counter.Parent == nil then
 			refreshCounter(stash.owner)
 		end
-		if stash.counter and now >= stash.nextSpawnAt and not stash.queue:IsFull() then
+		local raided = stash.owner:GetAttribute("RaidPhase") ~= nil
+		if stash.counter and not raided and now >= stash.nextSpawnAt and not stash.queue:IsFull() then
 			stash.nextSpawnAt = now + rng:NextNumber(CFG.SpawnIntervalMin, CFG.SpawnIntervalMax)
 			spawnCustomer(stash)
 		end
@@ -585,6 +639,9 @@ local function tick(dt: number)
 			end
 			if front.patienceLeft <= 0 then
 				CustomerService.Dismiss(front, "Angry")
+				for _, callback in complaintCallbacks do
+					task.spawn(callback, stash.owner)
+				end
 			end
 		end
 	end

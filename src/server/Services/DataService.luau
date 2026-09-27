@@ -202,6 +202,7 @@ function DataService.Snapshot(player: Player): any
 				stats = crafted.stats,
 				contraband = crafted.contraband,
 				fullSet = crafted.fullSet,
+				hidden = w.hidden == true,
 			})
 		end
 	end

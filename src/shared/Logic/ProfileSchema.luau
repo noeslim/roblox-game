@@ -9,13 +9,14 @@
 
 local ProfileSchema = {}
 
-ProfileSchema.VERSION = 4
+ProfileSchema.VERSION = 5
 
 export type WeaponData = {
 	id: string,
 	parts: { [string]: string }, -- slot -> part id
 	name: string?,
 	price: number?, -- price chosen by the dealer; nil = suggested price
+	hidden: boolean?, -- in a secret compartment (Logic/Raid)
 }
 
 export type HideoutData = {
@@ -31,6 +32,9 @@ export type StatsData = {
 export type DailyData = { LastDay: number, Streak: number }
 export type ContractEntry = { id: string, progress: number, done: boolean }
 export type ContractsData = { Day: number, List: { ContractEntry } }
+-- Heat gauge of the stash (Logic/Heat). LastRaidAt: os.time(). PendingRaid: a raid had started
+-- when the player left; it is resolved at the next join.
+export type HeatData = { Value: number, LastRaidAt: number, PendingRaid: boolean }
 
 export type ProfileData = {
 	Version: number,
@@ -43,6 +47,8 @@ export type ProfileData = {
 	Stats: StatsData,
 	Daily: DailyData,
 	Contracts: ContractsData,
+	Heat: HeatData,
+	HiddenParts: { [string]: number }, -- part id -> units in secret compartments (<= Parts[id])
 }
 
 export type SchemaConfig = {
@@ -58,6 +64,7 @@ export type SchemaConfig = {
 	parts: { [string]: any }, -- the parts catalogue (Config/Parts); only `.slot` is read
 	contractIds: { [string]: number }, -- contract id -> target (Config/Economy.Contracts)
 	contractsPerDay: number,
+	maxHeat: number,
 }
 
 -- Builds the SchemaConfig from Config/Economy and Config/Parts.
@@ -80,6 +87,7 @@ function ProfileSchema.ConfigFrom(economy: any, parts: { [string]: any }): Schem
 		parts = parts,
 		contractIds = contractIds,
 		contractsPerDay = economy.Contracts.PerDay,
+		maxHeat = economy.Heat.Max,
 	}
 end
 
@@ -110,6 +118,9 @@ ProfileSchema.Migrations = {
 	[3] = function(data: any, cfg: SchemaConfig)
 		-- v4 added the daily streak and daily contracts: filled with defaults by Sanitize
 	end,
+	[4] = function(data: any, cfg: SchemaConfig)
+		-- v5 added the heat gauge and hidden stock: filled with defaults by Sanitize
+	end,
 } :: { [number]: Migration }
 
 local function isFiniteNumber(v: any): boolean
@@ -135,6 +146,8 @@ function ProfileSchema.Template(cfg: SchemaConfig): ProfileData
 		Stats = { Crafted = 0, Sold = 0, Earned = 0 },
 		Daily = { LastDay = 0, Streak = 0 },
 		Contracts = { Day = 0, List = {} },
+		Heat = { Value = 0, LastRaidAt = 0, PendingRaid = false },
+		HiddenParts = {},
 	}
 end
 
@@ -190,7 +203,7 @@ local function sanitizeWeapon(w: any, cfg: SchemaConfig): WeaponData?
 	if isFiniteNumber(w.price) and w.price >= 1 then
 		price = math.floor(w.price)
 	end
-	return { id = w.id, parts = parts, name = name, price = price }
+	return { id = w.id, parts = parts, name = name, price = price, hidden = if w.hidden == true then true else nil }
 end
 
 -- Fills missing fields and clamps everything to legal values (corrupted or tampered saves).
@@ -264,6 +277,26 @@ function ProfileSchema.Sanitize(data: any, cfg: SchemaConfig): ProfileData
 		end
 	end
 	data.Contracts = { Day = wholeInRange(contracts.Day, 0, math.huge, 0), List = list }
+
+	local heat = if type(data.Heat) == "table" then data.Heat else {}
+	data.Heat = {
+		Value = if isFiniteNumber(heat.Value) then math.clamp(heat.Value, 0, cfg.maxHeat) else 0,
+		LastRaidAt = wholeInRange(heat.LastRaidAt, 0, math.huge, 0),
+		PendingRaid = heat.PendingRaid == true,
+	}
+
+	local hiddenParts: { [string]: number } = {}
+	if type(data.HiddenParts) == "table" then
+		for id, count in data.HiddenParts do
+			if type(id) == "string" and parts[id] then
+				local n = wholeInRange(count, 0, parts[id], 0)
+				if n > 0 then
+					hiddenParts[id] = n
+				end
+			end
+		end
+	end
+	data.HiddenParts = hiddenParts
 
 	return data :: ProfileData
 end

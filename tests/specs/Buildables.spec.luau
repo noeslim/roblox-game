@@ -4,13 +4,26 @@ local Economy = require("../../src/shared/Config/Economy")
 local EPS = 1e-6
 
 return function(t)
-	t.test("20 buildables, all listed in the menu order", function()
+	t.test("24 buildables, all listed in the menu order", function()
 		local n = 0
 		for _ in Buildables.ById do
 			n += 1
 		end
-		t.eq(n, 20)
-		t.eq(#Buildables.Order, 20)
+		t.eq(n, 24)
+		t.eq(#Buildables.Order, 24)
+	end)
+
+	t.test("secret compartments: a level the search chances know, some room", function()
+		local levels = 0
+		for id, def in Buildables.ById do
+			if def.hide then
+				levels += 1
+				t.eq(def.category, "Secret", id)
+				t.truthy(Economy.Heat.HiddenFindChance[def.hide.level] ~= nil, id .. " level")
+				t.truthy(def.hide.capacity >= 1, id .. " capacity")
+			end
+		end
+		t.eq(levels, 4)
 	end)
 
 	t.test("every buildable is well formed", function()

@@ -9,6 +9,7 @@ local Customer = require(Shared.Logic.Customer)
 local DataService = require(script.Parent.DataService)
 local CustomerService = require(script.Parent.CustomerService)
 local GoalsService = require(script.Parent.GoalsService)
+local RaidService = require(script.Parent.RaidService)
 local ServerNet = require(script.Parent.Parent.Lib.ServerNet)
 local AnimServer = require(script.Parent.Parent.Lib.AnimServer)
 local Cinematics = require(Shared.Config.Cinematics)
@@ -68,6 +69,10 @@ local function completeSale(player: Player, npc: CustomerService.Npc, weaponId: 
 	end
 	if ReplicatedStorage:GetAttribute("Phase") == "Night" then
 		GoalsService.Record(player, "saleNight", 1)
+		RaidService.AddHeat(player, "NightSale")
+	end
+	if weapon.contraband then
+		RaidService.AddHeat(player, "ContrabandSale")
 	end
 
 	-- deal scene, on the timeline of the owner's first-person view (Logic/DealScene): the dealer lays

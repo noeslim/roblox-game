@@ -29,6 +29,7 @@ Net.Events = {
 	"PlayPose", -- server -> all: (model, animationName) procedural animation played by every client
 	"StaminaRefill", -- server -> owner: stamina back to full (gas station)
 	"GoalsSync", -- server -> owner: daily streak + contracts (GoalsService.Snapshot)
+	"RaidReport", -- server -> owner: what a raid seized ({ lines, seizedValue, fine, saved, fled })
 	"LookAt", -- client -> server: (pitch, yaw) where the player looks, in degrees (head animation)
 }
 

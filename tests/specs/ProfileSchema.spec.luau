@@ -241,4 +241,29 @@ return function(t)
 		t.truthy(d.Contracts.List[1].done)
 	end)
 
+	t.test("v4 profile gets a cold heat gauge; hidden stock is clamped to what exists", function()
+		local d = ProfileSchema.Template(cfg)
+		d.Version = 4
+		d.Heat = nil
+		d.Parts = { ghost_body = 2 }
+		d.HiddenParts = { ghost_body = 7, fake = 3 }
+		d.Weapons = { { id = "w1", parts = { Body = "ghost_body" }, hidden = true }, { id = "w2", parts = { Body = "ghost_body" }, hidden = "yes" } }
+		t.truthy(ProfileSchema.Prepare(d, cfg))
+		t.eq(d.Version, ProfileSchema.VERSION)
+		t.eq(d.Heat.Value, 0)
+		t.falsy(d.Heat.PendingRaid)
+		t.eq(d.HiddenParts.ghost_body, 2)
+		t.eq(d.HiddenParts.fake, nil)
+		t.truthy(d.Weapons[1].hidden)
+		t.eq(d.Weapons[2].hidden, nil)
+	end)
+
+	t.test("heat is clamped", function()
+		local d = ProfileSchema.Template(cfg)
+		d.Heat = { Value = 1e9, LastRaidAt = -4, PendingRaid = true }
+		ProfileSchema.Sanitize(d, cfg)
+		t.eq(d.Heat.Value, Economy.Heat.Max)
+		t.eq(d.Heat.LastRaidAt, 0)
+		t.truthy(d.Heat.PendingRaid)
+	end)
 end

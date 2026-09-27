@@ -519,7 +519,7 @@ local function buildUi()
 		UI.Button({
 			Name = cat,
 			LayoutOrder = i,
-			Size = UDim2.fromOffset(100, 34),
+			Size = UDim2.new(1 / #Buildables.Categories, -6, 1, 0),
 			Text = string.upper(cat),
 			TextSize = 14,
 			BackgroundColor3 = UI.Theme.PanelLight,

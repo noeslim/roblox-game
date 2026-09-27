@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Economy = require(Shared.Config.Economy)
 local Buildables = require(Shared.Config.Buildables)
+local RaidConfig = require(Shared.Config.Raid)
 local Hideout = require(Shared.Logic.Hideout)
 local ModelFactory = require(Shared.Visual.ModelFactory)
 local PlotUtil = require(Shared.Visual.PlotUtil)
@@ -36,7 +37,7 @@ local function plotDims(plot: Instance)
 	return { sizeX = sx, sizeZ = sz, maxHeight = h }
 end
 
-local function addPrompt(model: Model, name: string, actionText: string, objectText: string)
+local function addPrompt(model: Model, name: string, actionText: string, objectText: string): ProximityPrompt
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = name
 	prompt.ActionText = actionText
@@ -46,6 +47,7 @@ local function addPrompt(model: Model, name: string, actionText: string, objectT
 	prompt.RequiresLineOfSight = false
 	prompt.KeyboardKeyCode = Enum.KeyCode.E
 	prompt.Parent = model.PrimaryPart
+	return prompt
 end
 
 local function spawnModel(player: Player, stash: Stash, obj: Hideout.Object)
@@ -60,6 +62,10 @@ local function spawnModel(player: Player, stash: Stash, obj: Hideout.Object)
 	model:SetAttribute("Rotation", obj.rotation)
 	if def.role == "Workbench" then
 		addPrompt(model, "WorkbenchPrompt", "Use Workbench", "Workbench")
+	end
+	if def.hide then -- RaidService hides the contraband in it
+		local prompt = addPrompt(model, "HidePrompt", "Hide stock", def.name)
+		prompt.HoldDuration = RaidConfig.HideHoldSeconds
 	end
 	model.Parent = stash.plot:WaitForChild("Objects")
 	stash.models[obj.id] = model

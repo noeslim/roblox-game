@@ -51,7 +51,9 @@ function Heat.Tick(state: HeatState, dt: number, ctx: TickContext, cfg: any)
 	if dt <= 0 then
 		return
 	end
-	local gain = cfg.Gains.VisibleContraband * ctx.visibleContraband * dt
+	-- a huge stock is not hotter than cfg.MaxVisibleCounted things lying around
+	local visible = math.min(ctx.visibleContraband, cfg.MaxVisibleCounted or math.huge)
+	local gain = cfg.Gains.VisibleContraband * visible * dt
 
 	local decay = cfg.DecayPerSecond * dt
 	if ctx.isNight then

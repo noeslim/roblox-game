@@ -34,6 +34,9 @@ export type Buildable = {
 	role: string?, -- "Counter" | "Workbench" | "Display" | "Storage"
 	parts: { PartSpec },
 	light: LightSpec?,
+	-- secret compartment: stock hidden here escapes a raid unless the search finds it
+	-- (Economy.Heat.HiddenFindChance[level]); capacity = weapons or part units
+	hide: { level: number, capacity: number }?,
 }
 
 local Buildables: { [string]: Buildable } = {}
@@ -131,6 +134,46 @@ add({
 		{ size = v(3, 4, 2.9), pos = v(0, 0, -0.05), color = "#3C4048", material = "Metal" },
 		{ size = v(2.4, 3.2, 0.1), pos = v(0, 0, 1.45), color = "#4A4F58", material = "DiamondPlate" },
 		{ size = v(0.5, 0.5, 0.5), pos = v(0.6, 0.3, 1.2), color = "#FFB020", material = "Neon", shape = "Ball" },
+	},
+})
+
+-- Secret --------------------------------------------------------------------
+-- Hold E on one to hide your contraband before the cops come in (Logic/Raid).
+add({
+	id = "floor_hatch", name = "Floor Hatch", category = "Secret", price = 150, solid = false,
+	size = v(4, 0.4, 4),
+	hide = { level = 1, capacity = 8 },
+	parts = {
+		{ size = v(4, 0.2, 4), pos = v(0, -0.1, 0), color = "#3B2F25", material = "WoodPlanks" },
+		{ size = v(0.8, 0.15, 0.2), pos = v(0, 0.075, 1.3), color = "#2A2A2E", material = "Metal" },
+	},
+})
+add({
+	id = "bookshelf_secret", name = "Pivoting Bookshelf", category = "Secret", price = 450,
+	size = v(6, 8, 2),
+	hide = { level = 2, capacity = 20 },
+	parts = {
+		{ size = v(6, 8, 1.2), pos = v(0, 0, -0.4), color = "#4A3526", material = "WoodPlanks" },
+		{ size = v(5.4, 1.4, 0.7), pos = v(0, 2.4, 0.55), color = "#6B2E2E", material = "Fabric" },
+		{ size = v(5.4, 1.4, 0.7), pos = v(0, 0.2, 0.55), color = "#2E4A5C", material = "Fabric" },
+		{ size = v(5.4, 1.4, 0.7), pos = v(0, -2, 0.55), color = "#5C4A2E", material = "Fabric" },
+	},
+})
+add({
+	id = "false_wall", name = "False Wall", category = "Secret", price = 900,
+	size = v(8, 10, 1),
+	hide = { level = 3, capacity = 40 },
+	parts = {
+		{ size = v(8, 10, 1), pos = v(0, 0, 0), color = "#6B3A2E", material = "Brick" },
+	},
+})
+add({
+	id = "floor_vault", name = "Floor Vault", category = "Secret", price = 2200, solid = false,
+	size = v(4, 0.4, 4),
+	hide = { level = 4, capacity = 80 },
+	parts = {
+		{ size = v(4, 0.2, 4), pos = v(0, -0.1, 0), color = "#3C4048", material = "DiamondPlate" },
+		{ size = v(3.4, 0.1, 3.4), pos = v(0, 0.05, 0), color = "#2E3238", material = "Metal" },
 	},
 })
 
@@ -240,5 +283,5 @@ add({
 return {
 	ById = Buildables,
 	Order = Order,
-	Categories = { "Business", "Structure", "Decor" },
+	Categories = { "Business", "Secret", "Structure", "Decor" },
 }

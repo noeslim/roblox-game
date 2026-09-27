@@ -46,7 +46,7 @@ Légende coût : 🟢 petit · 🟡 moyen · 🔴 gros (mérite Opus)
 
 ## Phase 2 — La vibe criminelle
 - 2.1 🟡 Cycle jour/nuit (`Logic/DayNight`) + éclairage, pluie, néons.
-- 2.2 🔴 Chaleur et descentes (`Logic/Heat` déjà prêt) : `RaidService`, compte à rebours, fouille, objets secrets.
+- ✅ 2.2 🔴 Chaleur et descentes (à valider dans Studio) : jauge sauvegardée, `RaidService`, compte à rebours, compartiments secrets (catégorie Secret), inspecteurs qui fouillent, saisie + amende, rapport.
 - 2.3 🟡 Marché noir de nuit avec prix dynamiques (`Logic/Market`).
 - 2.4 🟢 Musique et ambiance sonore par zone.
 

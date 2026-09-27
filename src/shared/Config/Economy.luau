@@ -165,16 +165,20 @@ Economy.Heat = {
 	Gains = {
 		ContrabandSale = 6,
 		NightSale = 2,
-		VisibleContraband = 0.1, -- per visible contraband item, per second
+		VisibleContraband = 0.02, -- per visible contraband item (weapon or part unit), per second
 		CustomerComplaint = 3,
 		ShootingRangeNoise = 1,
 	},
+	MaxVisibleCounted = 20, -- more contraband in sight than this does not heat faster
 	DecayPerSecond = 0.05,
 	NightDecayMultiplier = 0.5,
 	CleanDecayMultiplier = 2, -- no visible contraband
 	RaidCooldown = 600, -- seconds between two raids on the same stash
 	ProtectedBelowLevel = 5,
-	RaidWarningSeconds = 20,
+	RaidWarningSeconds = 20, -- sirens: time to hide the stock in secret compartments
+	SearchSeconds = 14, -- the inspectors search the stash
+	TickSeconds = 5, -- how often the server updates the gauge
+	InspectorCount = 2,
 	HeatAfterRaid = 20,
 	FineRate = 0.25, -- fine = 25% of seized value
 	-- chance a hidden compartment is found, by compartment level
