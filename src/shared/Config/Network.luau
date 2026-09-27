@@ -14,5 +14,8 @@ return {
 		LookAt = { capacity = 10, refillPerSecond = 8 },
 		RequestClaimDaily = { capacity = 3, refillPerSecond = 0.5 },
 		RequestBlackMarket = { capacity = 4, refillPerSecond = 1 },
+		RequestStartMission = { capacity = 3, refillPerSecond = 0.5 },
+		RequestAbandonMission = { capacity = 3, refillPerSecond = 0.5 },
+		RequestMissions = { capacity = 3, refillPerSecond = 1 },
 	} :: { [string]: { capacity: number, refillPerSecond: number } },
 }

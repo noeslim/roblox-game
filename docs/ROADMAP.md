@@ -40,7 +40,7 @@ Légende coût : 🟢 petit · 🟡 moyen · 🔴 gros (mérite Opus)
 - ✅ M.4 🟡 War Zone (à valider dans Studio) : équipes Rouge / Bleu équilibrées en entrant, capture par présence, score, manches, récompenses (seulement si les deux équipes ont des joueurs), réapparition au bunker. Le combat arrive avec la phase 3.
 
 ## Phase R — Recrutement (après la phase 2)
-- R.1 🟡 MissionService générique + logique pure testée.
+- ✅ R.1 🟡 MissionService générique + logique pure testée (à valider dans Studio) : étapes « événement », « aller à », « rester », limite de temps, événements d'échec, tableau JOBS avec 4 petits boulots.
 - R.2 🔴 Recrues : apparition en ville, dialogue, chaînes de missions par rôle.
 - R.3 🟡 Crew : salaire, loyauté, niveaux, équipement avec tes armes, Seller qui vend à ta place.
 

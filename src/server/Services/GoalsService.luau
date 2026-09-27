@@ -61,8 +61,19 @@ function GoalsService.Sync(player: Player)
 	end
 end
 
--- event: "sale" | "earned" | "craft" | "craftRare" | "saleNight" | "combo" | "tip"
-function GoalsService.Record(player: Player, event: string, amount: number)
+local recordCallbacks: { (Player, string, number, any) -> () } = {}
+
+-- Called for every recorded event (MissionService listens), with the optional info table.
+function GoalsService.OnRecord(callback: (Player, string, number, any) -> ())
+	table.insert(recordCallbacks, callback)
+end
+
+-- event: "sale" | "earned" | "craft" | "craftRare" | "saleNight" | "combo" | "tip" | "buy" | "warWin"
+-- info (optional): { night, rarity, contraband } for the mission filters
+function GoalsService.Record(player: Player, event: string, amount: number, info: any?)
+	for _, callback in recordCallbacks do
+		task.spawn(callback, player, event, amount, info)
+	end
 	local data = DataService.GetData(player)
 	local ledger = DataService.GetLedger(player)
 	if data == nil or ledger == nil then

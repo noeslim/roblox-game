@@ -118,6 +118,7 @@ En **Server**, dans la Command Bar (remplace `TonPseudo`) :
 game.Players.TonPseudo:SetAttribute("DebugGrant", 100000)   -- argent (les meubles s'achètent avec)
 game.Players.TonPseudo:SetAttribute("DebugGiveParts", 10)   -- 10 de chaque pièce d'arme du jeu
 game.Players.TonPseudo:SetAttribute("DebugLevel", 10)       -- niveau du dealer
+game.Players.TonPseudo:SetAttribute("DebugMission", "night_shift") -- lance une mission (id dans Config/Missions)
 ```
 
 ### Mettre la musique et les ambiances

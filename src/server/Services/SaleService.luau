@@ -64,7 +64,8 @@ local function completeSale(player: Player, npc: CustomerService.Npc, weaponId: 
 	data.Stats.Earned += total
 	DataService.AddXp(player, Economy.Progression.XpPerSale)
 	DataService.Sync(player)
-	GoalsService.Record(player, "sale", 1)
+	local night = ReplicatedStorage:GetAttribute("Phase") == "Night"
+	GoalsService.Record(player, "sale", 1, { night = night, rarity = weapon.rarity, contraband = weapon.contraband })
 	GoalsService.Record(player, "earned", total)
 	GoalsService.Record(player, "combo", comboCount)
 	if tip > 0 then

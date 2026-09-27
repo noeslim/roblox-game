@@ -77,7 +77,7 @@ local function craft(player: Player, partIds: any): (boolean, any)
 	table.insert(data.Weapons, saved)
 	DataService.AddXp(player, Economy.Progression.XpPerCraft)
 	DataService.Sync(player)
-	GoalsService.Record(player, "craft", 1)
+	GoalsService.Record(player, "craft", 1, { rarity = weapon.rarity, contraband = weapon.contraband })
 	if (table.find(Economy.RarityOrder, weapon.rarity) or 0) >= (table.find(Economy.RarityOrder, "Rare") or 99) then
 		GoalsService.Record(player, "craftRare", 1)
 	end
@@ -144,6 +144,7 @@ local function buyPart(player: Player, partId: any, amount: any, source: any): (
 	end
 	Inventory.Add(data.Parts, partId, amount, Economy.Profile.MaxPartStack)
 	DataService.Sync(player)
+	GoalsService.Record(player, "buy", amount, { contraband = Parts[partId].contraband == true, night = isNight() })
 	return true, Inventory.Count(data.Parts, partId)
 end
 

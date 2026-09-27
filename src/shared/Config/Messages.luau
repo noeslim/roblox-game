@@ -4,6 +4,10 @@
 local Messages = {}
 
 Messages.Errors = {
+	MissionRunning = "Finish or drop your current job first.",
+	MissionCooldown = "That job is not available yet.",
+	UnknownMission = "Unknown job.",
+	NoMission = "No job running.",
 	RateLimited = "Slow down!",
 	ServerError = "Something went wrong. Try again.",
 	NetworkError = "Connection problem. Try again.",
@@ -112,6 +116,27 @@ Messages.CustomerLines = {
 	Angry = { "Too slow. I'm out.", "Waste of my time.", "Forget it." },
 	Declined = { "Your loss.", "Fine. Keep it." },
 	Cops = { "Cops! I'm out.", "Nah, not with sirens around.", "Too hot here. Later." },
+}
+
+Messages.Missions = {
+	Board = "JOBS",
+	BoardTitle = "STREET JOBS",
+	BoardNote = "One job at a time. Pays cash and XP.",
+	Take = "TAKE",
+	Drop = "DROP",
+	Started = "New job: %s",
+	Done = "Job done: %s (+$%d)",
+	Failed = "Job failed: %s (%s)",
+	Reasons = {
+		customerLost = "a customer walked out",
+		dayStart = "the night is over",
+		nightStart = "night fell",
+		timeout = "out of time",
+		abandoned = "dropped",
+		default = "failed",
+	},
+	Available = "Available in %d:%02d",
+	Reward = "$%d · %d XP",
 }
 
 Messages.Market = {
