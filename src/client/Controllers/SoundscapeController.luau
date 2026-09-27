@@ -2,7 +2,7 @@
 -- Music and ambience by zone (roadmap 2.4). Where you are (district, inside a trap house) and what
 -- happens (your raid, day or night) pick the tracks (Logic/Soundscape); tracks crossfade, the
 -- street is muffled inside the basements, the music ducks during the first-person scenes.
--- M (or the note button) mutes the music. Ids and volumes: Config/Soundscape.
+-- N (or the note button) mutes the music. Ids and volumes: Config/Soundscape.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")

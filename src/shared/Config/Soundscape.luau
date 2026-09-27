@@ -10,7 +10,7 @@ return {
 	SceneDuck = 0.3, -- music volume x this during the first-person scenes (crafting, deals)
 	-- inside a trap house the street is heard through the walls
 	Indoor = { HighGain = -25, MidGain = -8, LowGain = 0 },
-	ToggleKey = "M", -- mutes / unmutes the music
+	ToggleKey = "N", -- mutes / unmutes the music (M is "move" in build mode)
 
 	Music = {
 		Raid = "", -- tense, fast (plays over everything during a raid on your stash)

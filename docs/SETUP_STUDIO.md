@@ -125,7 +125,7 @@ game.Players.TonPseudo:SetAttribute("DebugLevel", 10)       -- niveau du dealer
 Tous les sons sont vides au départ. Dans **Toolbox → Audio**, cherche un son (« lofi hip hop », « trap beat », « city ambience », « rain », « police siren »…), clic droit → **Copy Asset ID**, puis colle-le dans `src/shared/Config/Soundscape.luau` sous la forme `"rbxassetid://123456"` :
 - `Music` : une musique par zone, `Day` et `Night` (la planque, la descente, la War Zone, chaque quartier) ;
 - `Ambience` : un fond sonore par quartier.
-Une zone vide reprend la musique de `Streets`. En jeu, **M** (ou le bouton ♪ en bas à droite) coupe la musique.
+Une zone vide reprend la musique de `Streets`. En jeu, **N** (ou le bouton ♪ en bas à droite) coupe la musique.
 
 ### Tester une descente de police
 
