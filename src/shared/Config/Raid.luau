@@ -27,6 +27,16 @@ return {
 		InvestigationLookSeconds = 7, -- the lone inspector who comes to your door at level Investigation
 	},
 	HideHoldSeconds = 1, -- hold E on a secret compartment
+	-- the stock that is not hidden shows in the stash (racks, display cases, piles on supply crates)
+	Stock = {
+		WeaponScale = 0.5,
+		PileLayers = 6, -- things stacked on one crate
+		BoxSize = { x = 1.4, y = 0.6, z = 1 }, -- a box of parts
+		BoxColor = "#8A6B45",
+		ContrabandTape = "#C0392B", -- stripe on boxes of contraband parts
+		LayerTurn = 23, -- degrees between two layers of a pile (messy look)
+		Highlight = "#FF3B3B", -- outline of what will be seized, during a raid
+	},
 	Sounds = {
 		Siren = "", -- looped during the countdown (Toolbox: "police siren")
 		Hide = "", -- stock hidden ("wood slide", "drawer")

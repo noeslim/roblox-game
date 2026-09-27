@@ -216,11 +216,21 @@ function DataService.Snapshot(player: Player): any
 	}
 end
 
+local syncedCallbacks: { (Player) -> () } = {}
+
 function DataService.Sync(player: Player)
 	local snapshot = DataService.Snapshot(player)
 	if snapshot then
 		ServerNet.FireClient("DataSync", player, snapshot)
 	end
+	for _, callback in syncedCallbacks do
+		task.spawn(callback, player)
+	end
+end
+
+-- Called after each Sync (the weapons, parts or hidden stock may have changed).
+function DataService.OnSynced(callback: (Player) -> ())
+	table.insert(syncedCallbacks, callback)
 end
 
 return DataService

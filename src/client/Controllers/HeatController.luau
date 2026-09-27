@@ -63,7 +63,52 @@ local function buildGauge(): () -> ()
 		local level = tostring(player:GetAttribute("HeatLevel") or "Clear")
 		local color = Color3.fromHex((GAUGE.Colors :: any)[level] or GAUGE.Colors.Clear)
 		TweenService:Create(fill, TweenInfo.new(0.4), { Size = UDim2.fromScale(math.clamp(value / Economy.Heat.Max, 0, 1), 1), BackgroundColor3 = color }):Play()
-		label.Text = "HEAT  ·  " .. ((GAUGE.Labels :: any)[level] or level)
+		local inSight = tonumber(player:GetAttribute("InSight")) or 0
+		label.Text = "HEAT  ·  " .. ((GAUGE.Labels :: any)[level] or level) .. (if inSight > 0 then ("  ·  %d IN SIGHT"):format(inSight) else "")
+	end
+end
+
+-- Red outline on your stock that the inspectors will seize (StockService marks it Contraband).
+local outlines: { [Instance]: Highlight } = {}
+
+local function myStock(): Instance?
+	local hideouts = workspace:FindFirstChild("Hideouts")
+	if hideouts == nil then
+		return nil
+	end
+	for _, plot in hideouts:GetChildren() do
+		if plot:GetAttribute("OwnerUserId") == player.UserId then
+			return plot:FindFirstChild("Stock")
+		end
+	end
+	return nil
+end
+
+local function setOutlines(on: boolean)
+	local keep: { [Instance]: boolean } = {}
+	local stock = if on then myStock() else nil
+	if stock then
+		for _, m in stock:GetChildren() do
+			if m:IsA("Model") and m:GetAttribute("Contraband") == true then
+				keep[m] = true
+				if not outlines[m] then
+					local h = Instance.new("Highlight")
+					h.Adornee = m
+					h.FillTransparency = 0.75
+					h.FillColor = Color3.fromHex(RaidConfig.Stock.Highlight)
+					h.OutlineColor = Color3.fromHex(RaidConfig.Stock.Highlight)
+					h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+					h.Parent = m
+					outlines[m] = h
+				end
+			end
+		end
+	end
+	for m, h in outlines do
+		if not keep[m] then
+			h:Destroy()
+			outlines[m] = nil
+		end
 	end
 end
 
@@ -111,6 +156,7 @@ local function buildRaidOverlay()
 
 	local siren: Sound? = nil
 	local phaseShown: string? = nil
+	local lastOutline = 0
 	RunService.RenderStepped:Connect(function()
 		local phase = player:GetAttribute("RaidPhase")
 		if phase ~= phaseShown then
@@ -128,6 +174,11 @@ local function buildRaidOverlay()
 				siren:Destroy()
 				siren = nil
 			end
+		end
+		local now = os.clock()
+		if now - lastOutline > 0.5 then
+			lastOutline = now
+			setOutlines(phase ~= nil)
 		end
 		if phase == nil then
 			return
@@ -253,6 +304,7 @@ function HeatController:Start()
 	local refreshGauge = buildGauge()
 	player:GetAttributeChangedSignal("Heat"):Connect(refreshGauge)
 	player:GetAttributeChangedSignal("HeatLevel"):Connect(refreshGauge)
+	player:GetAttributeChangedSignal("InSight"):Connect(refreshGauge)
 	refreshGauge()
 	buildRaidOverlay()
 

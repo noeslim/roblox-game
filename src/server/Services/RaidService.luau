@@ -409,6 +409,7 @@ local function hideStock(player: Player, compartmentName: string)
 		end
 	end
 	clampHidden(data)
+	player:SetAttribute("InSight", Raid.CountVisible(stashItems(player, data), comps))
 	notify(player, Messages.Raid.Hidden:format(#pick, compartmentName), "success")
 	DataService.Sync(player)
 end
@@ -432,6 +433,31 @@ end
 
 -- Loop -------------------------------------------------------------------------------
 
+-- A compartment was removed: what no longer fits comes back in sight (and shows on the racks).
+local function unhideOverflow(player: Player, data: any, items: { Raid.Item }, comps: { Raid.Compartment }): boolean
+	local changed = false
+	local allocated = Raid.Allocate(items, comps)
+	for i, item in allocated do
+		if items[i].hidden and not item.hidden then
+			changed = true
+			if item.kind == "weapon" then
+				for _, w in data.Weapons do
+					if w.id == item.ref then
+						w.hidden = nil
+					end
+				end
+			elseif data.HiddenParts[item.ref] then
+				data.HiddenParts[item.ref] -= 1
+			end
+		end
+	end
+	if changed then
+		clampHidden(data)
+		DataService.Sync(player)
+	end
+	return changed
+end
+
 local function tick(dt: number)
 	local isNight = ReplicatedStorage:GetAttribute("Phase") == "Night"
 	for player, state in states do
@@ -441,7 +467,13 @@ local function tick(dt: number)
 				notify(player, Messages.Raid.Fled, "error")
 				resolve(player, state, true)
 			elseif state.raid == nil then
-				local visible = Raid.CountVisible(stashItems(player, data), compartments(player))
+				local comps = compartments(player)
+				local items = stashItems(player, data)
+				if unhideOverflow(player, data, items, comps) then
+					items = stashItems(player, data)
+				end
+				local visible = Raid.CountVisible(items, comps)
+				player:SetAttribute("InSight", visible)
 				Heat.Tick(state.heat, dt, { isNight = isNight, visibleContraband = visible }, CFG)
 				refreshLevel(player, state)
 				if Heat.CanRaid(state.heat, os.time(), data.Level, CFG) then

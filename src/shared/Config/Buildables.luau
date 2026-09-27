@@ -37,6 +37,9 @@ export type Buildable = {
 	-- secret compartment: stock hidden here escapes a raid unless the search finds it
 	-- (Economy.Heat.HiddenFindChance[level]); capacity = weapons or part units
 	hide: { level: number, capacity: number }?,
+	-- shows the stock that is not hidden (Logic/StockLayout): "standing" (on a rack) or "lying"
+	-- (in a case) hold one weapon per slot; "pile" stacks weapons and boxes of parts on top
+	stock: { kind: string, slots: { Vec } }?,
 }
 
 local Buildables: { [string]: Buildable } = {}
@@ -101,6 +104,7 @@ add({
 add({
 	id = "display_case", name = "Glass Display Case", category = "Business", role = "Display", price = 220,
 	size = v(4, 4, 2),
+	stock = { kind = "lying", slots = { v(0, 0.02, -0.45), v(0, 0.02, 0.45) } },
 	parts = {
 		{ size = v(4, 2, 2), pos = v(0, -1, 0), color = "#1E1B2E", material = "SmoothPlastic" },
 		{ size = v(3.8, 1.9, 1.8), pos = v(0, 0.95, 0), color = "#BFE9FF", material = "Glass", transparency = 0.7 },
@@ -111,6 +115,7 @@ add({
 add({
 	id = "wall_rack", name = "Weapon Wall Rack", category = "Business", role = "Display", price = 90,
 	size = v(6, 6, 1),
+	stock = { kind = "standing", slots = { v(0, 1.6, 0.25), v(0, -0.4, 0.25), v(0, -2.4, 0.25) } },
 	parts = {
 		{ size = v(6, 6, 0.3), pos = v(0, 0, -0.35), color = "#3A3A40", material = "WoodPlanks" },
 		{ size = v(5, 0.2, 0.5), pos = v(0, 1.5, 0.15), color = "#1F1F24", material = "Metal" },
@@ -121,6 +126,7 @@ add({
 add({
 	id = "storage_crate", name = "Supply Crate", category = "Business", role = "Storage", price = 30,
 	size = v(3, 3, 3),
+	stock = { kind = "pile", slots = { v(0, 1.5, 0), v(0, -1.5, 2.4) } }, -- on top, then on the floor in front
 	parts = {
 		{ size = v(2.9, 2.9, 2.9), pos = v(0, 0, 0), color = "#7A5230", material = "WoodPlanks" },
 		{ size = v(3, 0.3, 3), pos = v(0, 0.9, 0), color = "#3C3C42", material = "Metal" },
