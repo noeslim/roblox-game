@@ -20,6 +20,8 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, HERE)
 
 import lib  # noqa: E402
+import skins  # noqa: E402
+import uv  # noqa: E402
 from assets import BUILDABLES, WEAPON_PARTS  # noqa: E402
 from city_assets import CITY_ASSETS  # noqa: E402
 from materials import MATERIALS  # noqa: E402
@@ -39,9 +41,37 @@ def hex_to_linear(h):
     return [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in rgb]
 
 
+def skin_material(key):
+    """UV-mapped PBR material of a textured key: Studio's importer uploads the maps and makes a
+    SurfaceAppearance for every mesh using it."""
+    m = bpy.data.materials.new(key)
+    m.use_nodes = True
+    nodes, links = m.node_tree.nodes, m.node_tree.links
+    bsdf = nodes["Principled BSDF"]
+    _rbx, _color, _rough, metal, _e, _t = MATERIALS[key]
+    bsdf.inputs["Metallic"].default_value = metal
+
+    def image(path, non_color):
+        node = nodes.new("ShaderNodeTexImage")
+        node.image = bpy.data.images.load(path, check_existing=True)
+        if non_color:
+            node.image.colorspace_settings.name = "Non-Color"
+        return node
+
+    links.new(image(skins.color_path(key), False).outputs["Color"], bsdf.inputs["Base Color"])
+    links.new(image(skins.pattern_path(key, "roughness"), True).outputs["Color"], bsdf.inputs["Roughness"])
+    nmap = nodes.new("ShaderNodeNormalMap")
+    links.new(image(skins.pattern_path(key, "normal"), True).outputs["Color"], nmap.inputs["Color"])
+    links.new(nmap.outputs["Normal"], bsdf.inputs["Normal"])
+    return m
+
+
 def make_materials():
     mats = {}
     for key, (_, color, rough, metal, emission, transparency) in MATERIALS.items():
+        if key in skins.SKINS:
+            mats[key] = skin_material(key)
+            continue
         m = bpy.data.materials.new(key)
         m.use_nodes = True
         bsdf = m.node_tree.nodes["Principled BSDF"]
@@ -74,6 +104,7 @@ def build():
 def make_library():
     """Builds every model in the current (empty) scene. Returns (layout, groups, stats, materials)."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    skins.build_all()
     mats = make_materials()
 
     layout = {}
@@ -123,6 +154,9 @@ def make_library():
         ob.data.materials.clear()
         ob.data.materials.append(mats[mat])
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+        # UVs in studs: textured keys tile their skin, the others get a sensible density for
+        # Roblox's own materials
+        uv.box_project(ob, skins.SKINS[mat][1] if mat in skins.SKINS else 8)
         # pivot = bounding box center, like a Roblox MeshPart's CFrame
         bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
         bpy.ops.object.shade_smooth_by_angle(angle=math.radians(35))
@@ -260,9 +294,10 @@ def write_luau(layout, groups):
         "MeshLibrary.Materials = {",
     ]
     for key, (rbx_mat, color, _r, _m, _e, transparency) in MATERIALS.items():
-        lines.append(f"\t{key} = {{ material = {lua_str(rbx_mat)}, color = {lua_str(color)}, transparency = {transparency} }},")
+        textured = "true" if key in skins.SKINS else "false"
+        lines.append(f"\t{key} = {{ material = {lua_str(rbx_mat)}, color = {lua_str(color)}, transparency = {transparency}, textured = {textured} }},")
     lines += [
-        "} :: { [string]: { material: string, color: string, transparency: number } }",
+        "} :: { [string]: { material: string, color: string, transparency: number, textured: boolean } }",
         "",
         "-- bounding box of each mesh (center relative to the model origin, size), in studs",
         "MeshLibrary.Parts = {",

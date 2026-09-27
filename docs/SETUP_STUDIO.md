@@ -167,6 +167,14 @@ Quand Claude met à jour les modèles : supprime l'ancien `BlackMarketMeshes` da
 - dans la fenêtre d'import, vérifie que **Import Textures / Materials** est coché (c'est le cas par défaut) ;
 - l'import prend un peu plus de temps (le fichier fait ~12 Mo) : c'est normal.
 
+**Modèles texturés (version « Map v2 »)** : chaque modèle a maintenant des coordonnées de texture (UV) et ses
+propres textures (brique, pierre, béton, métal peint, bois, rouille, toile, tuiles...), elles aussi dans le FBX
+(~25 Mo, 23 textures de modèles en plus). À l'import, Studio crée un **SurfaceAppearance** dans chaque MeshPart
+concerné : c'est ce qui donne la matière aux façades, corniches, escaliers de secours, caisses... Les modèles
+sans texture (vitres, néons, plastique, peinture de voiture) restent en matériau Roblox + couleur.
+Pour passer à cette version : supprime l'ancien `BlackMarketMeshes`, **redémarre Studio**, refais l'import (étapes 1
+à 7, textures cochées), puis reconstruis la ville (section 10 : `Build()` remplace l'ancienne ville toute seule). Output doit afficher la version `2026-09-27 textured facades`.
+
 Au lancement (ou quand tu construis la ville, section 10), le jeu lit ces carrés et crée des **MaterialVariant**
 `BM_<nom>` dans **MaterialService**. Output affiche `[MapBuilder] 12 textures ready`. Toutes les routes, trottoirs,
 façades et maisons les utilisent. Si Output affiche `0 textures`, l'import n'a pas pris les textures : refais

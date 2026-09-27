@@ -205,16 +205,23 @@ local function placeLibrary(assetId: string, parent: Instance, origin: CFrame, c
 	for _, t in templates do
 		local look = MeshLibrary.Materials[t.mat]
 		local p = t.part:Clone()
+		-- textured keys keep the SurfaceAppearance the importer made from the embedded maps (the
+		-- mesh has UVs in studs); the others are plain Roblox material + color
+		local skinned = false
 		for _, child in p:GetChildren() do
 			if child:IsA("SurfaceAppearance") then
-				child:Destroy()
+				if look.textured then
+					skinned = true
+				else
+					child:Destroy()
+				end
 			end
 		end
 		p.Size = t.size
 		p.CFrame = origin * t.cf
 		p.Anchored = true
 		p.Material = material(look.material)
-		p.Color = Color3.fromHex(look.color)
+		p.Color = if skinned then Color3.new(1, 1, 1) else Color3.fromHex(look.color)
 		p.Transparency = look.transparency
 		p.CanCollide = canCollide and look.material ~= "Neon"
 		p.CanTouch = false
@@ -240,6 +247,21 @@ end
 -- For the map builder: places a library model (buildings, props, trap house details).
 function ModelFactory.PlaceLibraryModel(assetId: string, parent: Instance, origin: CFrame, canCollide: boolean): { MeshPart }
 	return placeLibrary(assetId, parent, origin, canCollide)
+end
+
+-- The library models that are variants of `base` ("bld_shop", "bld_shop_b", "bld_shop_c"...), sorted.
+function ModelFactory.LibraryVariants(base: string): { string }
+	local lib = loadLibrary()
+	local list = {}
+	if lib then
+		for id in lib do
+			if id == base or string.match(id, "^" .. base .. "_%a$") then
+				table.insert(list, id)
+			end
+		end
+	end
+	table.sort(list)
+	return list
 end
 
 function ModelFactory.HasMeshes(assetId: string): boolean

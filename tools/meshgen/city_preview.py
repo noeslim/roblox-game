@@ -198,6 +198,37 @@ def build_wires(col, side):
             col.objects.link(ob)
 
 
+def variant(base, b):
+    """Same pick as MapBuilder: one of the archetype's facade variants, fixed per spot."""
+    import re
+
+    names = sorted(k for k in LIBRARY if k == base or re.fullmatch(re.escape(base) + "_[A-Za-z]", k))
+    if not names:
+        return base
+    return names[int(math.floor(abs(b["x"] * 3 + b["z"] * 7))) % len(names)]
+
+
+def street_shots(cam):
+    """Close-ups at eye height on a street of each kind of building."""
+    side = CFG["Grid"]["SidewalkHeight"]
+    wanted = {"apartment": "street_blocks", "shop": "street_shops", "chinatown": "street_chinatown", "office": "street_downtown"}
+    done = set()
+    for b in LAYOUT["buildings"]:
+        name = wanted.get(b["archetype"])
+        if name is None or name in done:
+            continue
+        done.add(name)
+        a = CFG["Archetypes"][b["archetype"]]
+        r = math.radians(b["rot"])
+
+        def world(x, y, z):
+            return (b["x"] + x * math.cos(r) + z * math.sin(r), side + y, b["z"] - x * math.sin(r) + z * math.cos(r))
+
+        eye = world(a["w"] * 0.9, 6, a["d"] / 2 + 26)
+        target = world(-a["w"] * 0.1, a["h"] * 0.35, a["d"] / 2)
+        shot(cam, name, eye, target, lens=22)
+
+
 def build_city(offsets):
     col = bpy.data.collections.new("City")
     bpy.context.scene.collection.children.link(col)
@@ -217,7 +248,7 @@ def build_city(offsets):
             make_part({"name": "Door", "shape": "Block", "size": {"x": dr["w"], "y": dr["h"], "z": dr["t"]}, "pos": {"x": dr["x"], "y": dr["y"], "z": dr["z"]}, "material": dr["material"], "color": dr["color"]}, base, col)
         for l in spec["lights"]:
             add_point_light(base, l, col)
-        place_asset("bld_" + b["archetype"], base, offsets, col, skip_prefix="door_")
+        place_asset(variant("bld_" + b["archetype"], b), base, offsets, col, skip_prefix="door_")
         if b.get("sign"):
             make_part({"name": "Sign", "shape": "Block", "size": {"x": min(a["w"] * 0.6, 18), "y": 3, "z": 0.4}, "pos": {"x": 0, "y": 12, "z": a["d"] / 2 + 0.7}, "material": "Neon", "color": "#FF3FA4"}, base, col)
     B = CFG["Houses"]["BasementDepth"]
@@ -300,6 +331,9 @@ def main():
     build_city(offsets)
     cam = setup_render()
     os.makedirs(OUT, exist_ok=True)
+    street_shots(cam)
+    if "--street" in sys.argv:
+        return
     half = LAYOUT["half"]
     shot(cam, "overview", (half * 0.9, half * 1.05, half * 1.45), (0, 0, 60), lens=30)
     h = LAYOUT["houses"][1]

@@ -302,6 +302,84 @@ def planks(rng):
     return np.clip(color, 0, 1), height, 0.7, 1.8
 
 
+@texture("Metal", 6)
+def painted_metal(rng):
+    """Painted steel: flat paint, fine orange peel, scratches and chips showing darker metal."""
+    peel = fbm(rng, beta=0.9, lo=50)
+    wear = fbm(rng, beta=2.0, lo=1, hi=10)
+    scratches = smooth(fbm(rng, beta=1.0, lo=6, aniso=(1.0, 0.03)), 0.8, 0.86)
+    chips = smooth(fbm(rng, beta=0.6, lo=40), 0.8, 0.85) * smooth(wear, 0.5, 0.8)
+    grime = smooth(fbm(rng, beta=1.6, lo=2, aniso=(1.0, 0.08)), 0.55, 0.9)
+    v = 0.78 + peel * 0.06 - grime * 0.18 - scratches * 0.12
+    color = mix(tint(v, hexcolor("#E6E6E6")), tint(0.35 + peel * 0.1, hexcolor("#9A9AA0")), chips)
+    height = 0.6 + peel * 0.08 - chips * 0.5 - scratches * 0.2
+    rough = 0.5 + grime * 0.3 - chips * 0.2
+    return np.clip(color, 0, 1), height, rough, 1.2
+
+
+@texture("Limestone", 10)
+def stone(rng):
+    """Cast stone trim: smooth blocks with thin joints, weathering streaks."""
+    ys, xs = np.mgrid[0:N, 0:N] / N
+    joints = np.maximum(smooth(np.abs(((xs * 2) % 1) - 0.5), 0.494, 0.499), smooth(np.abs(((ys * 4) % 1) - 0.5), 0.49, 0.498))
+    grain = fbm(rng, beta=0.8, lo=40)
+    mottling = fbm(rng, beta=2.2, lo=1, hi=10)
+    streaks = fbm(rng, beta=1.3, lo=2, aniso=(1.0, 0.05))
+    v = 0.72 + grain * 0.06 + mottling * 0.1 - streaks * 0.18 - joints * 0.2
+    color = tint(v, hexcolor("#EAE4D8"))
+    height = 0.55 + grain * 0.15 - joints * 0.6
+    return np.clip(color, 0, 1), height, 0.85 - streaks * 0.1, 1.2
+
+
+@texture("Fabric", 4)
+def canvas(rng):
+    """Woven canvas (awnings, tarps, fabric)."""
+    ys, xs = np.mgrid[0:N, 0:N] / N
+    weave = (0.5 + 0.5 * np.sin(xs * 2 * np.pi * 96)) * (0.5 + 0.5 * np.sin(ys * 2 * np.pi * 96))
+    dirt = fbm(rng, beta=2.0, lo=1, hi=10)
+    v = 0.75 + weave * 0.12 - dirt * 0.2
+    color = tint(v, hexcolor("#E4E0D8"))
+    return np.clip(color, 0, 1), weave * 0.5, 0.95, 1.0
+
+
+@texture("CorrodedMetal", 6)
+def rust(rng):
+    """Heavy rust with flaking paint."""
+    base = fbm(rng, beta=1.6, lo=1, hi=30)
+    flakes = smooth(fbm(rng, beta=0.9, lo=12), 0.55, 0.65)
+    pits = smooth(fbm(rng, beta=0.3, lo=90), 0.7, 0.78)
+    rusty = mix(tint(0.4 + base * 0.3, hexcolor("#8A4A28")), tint(0.3 + base * 0.2, hexcolor("#5A3020")), pits)
+    paint = tint(0.55 + base * 0.1, hexcolor("#6A6E72"))
+    color = mix(rusty, paint, flakes * 0.6)
+    height = 0.4 + flakes * 0.4 - pits * 0.3 + base * 0.1
+    return np.clip(color, 0, 1), height, 0.9 - flakes * 0.2, 2.4
+
+
+@texture("Wood", 6)
+def wood_grain(rng):
+    """Continuous wood grain (poles, frames, furniture): no board joints."""
+    ys, xs = np.mgrid[0:N, 0:N] / N
+    grain = fbm(rng, beta=1.5, lo=3, aniso=(0.03, 1.0))
+    rings = 0.5 + 0.5 * np.sin((ys + grain * 0.08) * 2 * np.pi * 22)
+    knots = smooth(fbm(rng, beta=0.6, lo=6), 0.83, 0.88)
+    v = 0.55 + grain * 0.2 + rings * 0.1 - knots * 0.25
+    color = tint(v, hexcolor("#A07850"))
+    height = 0.5 + rings * 0.2 + grain * 0.1 - knots * 0.2
+    return np.clip(color, 0, 1), height, 0.75, 1.4
+
+
+@texture("Wood", 6)
+def bark(rng):
+    """Tree bark: deep vertical furrows."""
+    ys, xs = np.mgrid[0:N, 0:N] / N
+    furrows = fbm(rng, beta=1.2, lo=6, aniso=(1.0, 0.12))
+    plates = smooth(furrows, 0.35, 0.6)
+    moss = smooth(fbm(rng, beta=2.0, lo=1, hi=8), 0.7, 0.85)
+    base = tint(0.35 + plates * 0.35, hexcolor("#8A7058"))
+    color = mix(base, tint(np.full((N, N), 0.4), hexcolor("#4A5A30")), moss * 0.4)
+    return np.clip(color, 0, 1), plates, 0.95, 3.0
+
+
 # Output ------------------------------------------------------------------------------------------------
 
 def save(name, color, height, rough, strength):

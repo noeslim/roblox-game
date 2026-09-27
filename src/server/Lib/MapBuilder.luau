@@ -374,7 +374,10 @@ local function buildBuilding(b: CityLayout.Building, parent: Instance, origin: C
 				body = p
 			end
 		end
-		local meshes = ModelFactory.PlaceLibraryModel("bld_" .. b.archetype, model, cf, false)
+		-- one of the archetype's facade variants, always the same for this spot
+		local variants = ModelFactory.LibraryVariants("bld_" .. b.archetype)
+		local pick = if #variants > 0 then variants[math.floor(math.abs(b.x * 3 + b.z * 7)) % #variants + 1] else "bld_" .. b.archetype
+		local meshes = ModelFactory.PlaceLibraryModel(pick, model, cf, false)
 		if furnished then
 			-- the facade's closed door leaf gives way to a door that opens (DoorController)
 			for i = #meshes, 1, -1 do
@@ -737,7 +740,7 @@ end
 -- Build ---------------------------------------------------------------------------------------------------
 
 -- Printed at every build: tells whether Studio runs the latest code (Rojo connected).
-MapBuilder.VERSION = "2026-09-26h"
+MapBuilder.VERSION = "2026-09-27 textured facades"
 
 function MapBuilder.Build(): (Instance, Instance)
 	local started = os.clock()

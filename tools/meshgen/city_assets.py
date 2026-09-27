@@ -9,7 +9,7 @@ import math
 import os
 import random
 
-from lib import box, cyl, extrude, lathe, tube
+from lib import box, cyl, extrude, lathe, neon_text, tube
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(HERE, "city_layout.json")) as f:
@@ -26,6 +26,8 @@ def city_asset(fn):
 
 
 # Facade helpers ------------------------------------------------------------------------------------
+# The walls are Roblox parts (textured by MapBuilder); these meshes hang just outside them: window
+# openings (dark reveal + glass + surround), bands, cornices, roof clutter, signs.
 
 OX = [0.0]  # x of the facade box center (the trap house is centered on x = +4)
 
@@ -48,19 +50,34 @@ def _face_size(face, along, up, depth):
     return (depth, up, along)
 
 
-def window(face, u, y, w, h, W, D, lit=False, frame="trim_light", sill=True):
+def _fbox(face, u, y, along, up, depth, out, W, D, mat):
+    box(_face_size(face, along, up, depth), _face_point(face, u, y, W, D, out), mat, bev=0, segs=1)
+
+
+def window(face, u, y, w, h, W, D, lit=False, frame="trim_light", sill=True, style="classic"):
+    """A window opening: dark reveal (reads as depth), glass, surround, mullions, lintel and sill.
+    style: "classic" (stone surround, 4 panes, lintel with keystone), "modern" (thin dark frame),
+    "plain" (surround only)."""
     glass = "window_lit" if lit else "window_glass"
-    box(_face_size(face, w, h, 0.1), _face_point(face, u, y, W, D, 0.06), glass, bev=0, segs=1)
-    for dy in (-h / 2, h / 2):
-        box(_face_size(face, w + 0.5, 0.3, 0.3), _face_point(face, u, y + dy, W, D, 0.12), frame, bev=0, segs=1)
-    for du in (-w / 2, w / 2):
-        box(_face_size(face, 0.3, h, 0.3), _face_point(face, u + du, y, W, D, 0.12), frame, bev=0, segs=1)
-    box(_face_size(face, 0.18, h, 0.15), _face_point(face, u, y, W, D, 0.1), frame, bev=0, segs=1)
+    _fbox(face, u, y, w + 0.5, h + 0.5, 0.05, 0.03, W, D, "plastic_black")  # reveal
+    _fbox(face, u, y, w, h, 0.08, 0.08, W, D, glass)
+    t = 0.18 if style == "modern" else 0.35
+    fmat = "trim_dark" if style == "modern" else frame
+    for dy in (-h / 2 - t / 2, h / 2 + t / 2):
+        _fbox(face, u, y + dy, w + 2 * t, t, 0.3, 0.16, W, D, fmat)
+    for du in (-w / 2 - t / 2, w / 2 + t / 2):
+        _fbox(face, u + du, y, t, h, 0.3, 0.16, W, D, fmat)
+    if style != "plain":
+        _fbox(face, u, y, 0.12, h, 0.1, 0.14, W, D, "trim_dark")  # mullion
+        _fbox(face, u, y + h * 0.1, w, 0.12, 0.1, 0.14, W, D, "trim_dark")  # transom
+    if style == "classic":
+        _fbox(face, u, y + h / 2 + t + 0.35, w + 1.2, 0.7, 0.45, 0.22, W, D, frame)  # lintel
+        _fbox(face, u, y + h / 2 + t + 0.4, 0.8, 0.9, 0.55, 0.3, W, D, frame)  # keystone
     if sill:
-        box(_face_size(face, w + 0.9, 0.3, 0.7), _face_point(face, u, y - h / 2 - 0.2, W, D, 0.3), frame, bev=0, segs=1)
+        _fbox(face, u, y - h / 2 - t - 0.15, w + 1.0, 0.3, 0.8, 0.4, W, D, frame if style != "modern" else "metal_dark")
 
 
-def window_grid(face, W, D, floors, floor_h, per_floor, first_floor, w, h, rng, lit_chance=0.3, frame="trim_light", margin=4, y0=0.0):
+def window_grid(face, W, D, floors, floor_h, per_floor, first_floor, w, h, rng, lit_chance=0.3, frame="trim_light", margin=4, y0=0.0, style="classic", ac_chance=0.0):
     length = W if face in ("front", "back") else D
     usable = length - 2 * margin
     step = usable / per_floor
@@ -68,47 +85,218 @@ def window_grid(face, W, D, floors, floor_h, per_floor, first_floor, w, h, rng, 
         y = y0 + f * floor_h + floor_h * 0.55
         for i in range(per_floor):
             u = -length / 2 + margin + step * (i + 0.5)
-            window(face, u, y, w, h, W, D, lit=rng.random() < lit_chance, frame=frame)
+            window(face, u, y, w, h, W, D, lit=rng.random() < lit_chance, frame=frame, style=style)
+            if ac_chance and rng.random() < ac_chance:
+                # window air conditioner hanging under the sill
+                _fbox(face, u, y - h / 2 - 1.2, 2.4, 1.4, 1.6, 0.9, W, D, "plastic_grey")
+                _fbox(face, u, y - h / 2 - 1.2, 2.0, 1.0, 0.05, 1.72, W, D, "metal_dark")
 
 
-def cornice(W, D, y, mat="trim_light", depth=0.8, height=0.8):
-    box((W + 2 * depth, height, depth), (0, y, D / 2 + depth / 2), mat, bev=0, segs=1)
-    box((W + 2 * depth, height, depth), (0, y, -D / 2 - depth / 2), mat, bev=0, segs=1)
-    box((depth, height, D), (W / 2 + depth / 2, y, 0), mat, bev=0, segs=1)
-    box((depth, height, D), (-W / 2 - depth / 2, y, 0), mat, bev=0, segs=1)
+def band(W, D, y, mat="trim_light", h=0.5, depth=0.35):
+    """Horizontal band all around (string course between floors, plinth top...)."""
+    for face in ("front", "back"):
+        _fbox(face, 0, y, W + 2 * depth, h, depth, depth / 2, W, D, mat)
+    for face in ("left", "right"):
+        _fbox(face, 0, y, D, h, depth, depth / 2, W, D, mat)
+
+
+def plinth(W, D, h=1.6, mat="concrete", depth=0.3):
+    for face in ("front", "back"):
+        _fbox(face, 0, h / 2, W + 2 * depth, h, depth, depth / 2, W, D, mat)
+    for face in ("left", "right"):
+        _fbox(face, 0, h / 2, D, h, depth, depth / 2, W, D, mat)
+
+
+def quoins(W, D, H, mat="trim_light", block=1.3, y0=1.6):
+    """Stone blocks on the four corners, long and short in turn."""
+    y, i = y0, 0
+    while y + block <= H - 1:
+        long = 2.2 if i % 2 == 0 else 1.4
+        for sx in (-1, 1):
+            for sz in (-1, 1):
+                box((long, block - 0.12, 0.3), (sx * (W / 2 - long / 2 + 0.15) + OX[0], y + block / 2, sz * (D / 2 + 0.15)), mat, bev=0, segs=1)
+                box((0.3, block - 0.12, long), (sx * (W / 2 + 0.15) + OX[0], y + block / 2, sz * (D / 2 - long / 2 + 0.15)), mat, bev=0, segs=1)
+        y += block
+        i += 1
+
+
+def cornice(W, D, y, mat="trim_light", depth=0.8, height=0.8, dentils=False):
+    """Stepped crown moulding around the top (+ small dentil blocks under it)."""
+    for k, (d, h, dy) in enumerate(((depth * 0.45, height * 0.45, -height * 0.5), (depth, height * 0.6, 0.0), (depth * 1.25, height * 0.3, height * 0.45))):
+        for face in ("front", "back"):
+            _fbox(face, 0, y + dy, W + 2 * d, h, d, d / 2, W, D, mat)
+        for face in ("left", "right"):
+            _fbox(face, 0, y + dy, D, h, d, d / 2, W, D, mat)
+    if dentils:
+        for face in ("front", "back"):
+            n = int(W // 1.2)
+            for i in range(n):
+                _fbox(face, -W / 2 + 0.6 + i * (W - 1.2) / max(1, n - 1), y - height * 0.95, 0.5, 0.45, 0.5, 0.25, W, D, mat)
 
 
 def parapet(W, D, H, mat="trim_light", h=1.4, t=0.8):
-    box((W, h, t), (0, H + h / 2, D / 2 - t / 2), mat, bev=0, segs=1)
-    box((W, h, t), (0, H + h / 2, -D / 2 + t / 2), mat, bev=0, segs=1)
-    box((t, h, D - 2 * t), (W / 2 - t / 2, H + h / 2, 0), mat, bev=0, segs=1)
-    box((t, h, D - 2 * t), (-W / 2 + t / 2, H + h / 2, 0), mat, bev=0, segs=1)
+    box((W, h, t), (0 + OX[0], H + h / 2, D / 2 - t / 2), mat, bev=0, segs=1)
+    box((W, h, t), (0 + OX[0], H + h / 2, -D / 2 + t / 2), mat, bev=0, segs=1)
+    box((t, h, D - 2 * t), (W / 2 - t / 2 + OX[0], H + h / 2, 0), mat, bev=0, segs=1)
+    box((t, h, D - 2 * t), (-W / 2 + t / 2 + OX[0], H + h / 2, 0), mat, bev=0, segs=1)
+    # coping on top
+    box((W + 0.3, 0.25, t + 0.3), (0 + OX[0], H + h + 0.12, D / 2 - t / 2), "concrete", bev=0, segs=1)
+    box((W + 0.3, 0.25, t + 0.3), (0 + OX[0], H + h + 0.12, -D / 2 + t / 2), "concrete", bev=0, segs=1)
+
+
+def drainpipe(x, z, top, bottom=0.3):
+    tube([(x, top, z), (x, bottom + 0.8, z), (x, bottom + 0.3, z + 0.5)], 0.22, "metal_dark", verts=8)
+    box((0.9, 0.6, 0.9), (x, top + 0.3, z), "metal_dark", bev=0.05, segs=1)
+    y = bottom + 2.5
+    while y < top - 1:
+        box((0.6, 0.12, 0.3), (x, y, z), "metal_black", bev=0, segs=1)
+        y += 3.5
 
 
 def ac_unit(x, y, z):
     box((3, 2, 2.4), (x, y + 1, z), "plastic_grey", bev=0.1, segs=1)
     cyl(0.8, 0.1, (x, y + 2.02, z), "metal_black", bev=0, verts=12)
+    for i in range(4):
+        box((2.6, 0.08, 0.05), (x, y + 0.4 + i * 0.35, z + 1.22), "metal_dark", bev=0, segs=1)
 
 
-DOOR_LEAF = {"wood_dark": "door_wood", "window_glass": "door_glass", "metal_dark": "door_metal"}
+def water_tank(x, y, z, r=3, h=6):
+    for dx in (-r * 0.6, r * 0.6):
+        for dz in (-r * 0.6, r * 0.6):
+            box((0.35, 4, 0.35), (x + dx, y + 2, z + dz), "metal_black", bev=0, segs=1)
+    box((r * 1.8, 0.3, r * 1.8), (x, y + 4, z), "wood_worn", bev=0, segs=1)
+    cyl(r, h, (x, y + 4 + h / 2, z), "wood_worn", bev=0.1, verts=18)
+    for k in (0.25, 0.75):
+        cyl(r + 0.08, 0.2, (x, y + 4 + h * k, z), "metal_dark", bev=0, verts=18)
+    lathe([(r + 0.2, 0), (0.1, 2)], (x, y + 4 + h, z), "metal_dark", verts=18)
+
+
+def roof_clutter(W, D, H, rng, count=5, tank=False, dish=True):
+    """Bulkhead (stair exit), vents, pipes, a satellite dish, an antenna, maybe a water tank."""
+    bx, bz = -W / 4, -D / 4
+    box((6, 7, 5), (bx + OX[0], H + 3.5, bz), "concrete", bev=0.05, segs=1)
+    box((6.4, 0.4, 5.4), (bx + OX[0], H + 7.2, bz), "concrete", bev=0, segs=1)
+    box((0.1, 6, 3), (bx + OX[0] + 3.02, H + 3, bz), "metal_dark", bev=0, segs=1)
+    for i in range(count):
+        x = rng.uniform(-W / 2 + 3, W / 2 - 3)
+        z = rng.uniform(-D / 2 + 3, D / 2 - 3)
+        if abs(x - bx) < 5 and abs(z - bz) < 5:
+            continue
+        kind = rng.random()
+        if kind < 0.4:
+            cyl(0.5, 2.2, (x + OX[0], H + 1.1, z), "metal_steel", bev=0.05, verts=10)
+            lathe([(0.9, 0), (0.1, 0.5)], (x + OX[0], H + 2.2, z), "metal_dark", verts=10)
+        elif kind < 0.75:
+            ac_unit(x + OX[0], H, z)
+        else:
+            box((2, 1.2, 2), (x + OX[0], H + 0.6, z), "metal_dark", bev=0.05, segs=1)
+            tube([(x + OX[0], H + 1.2, z), (x + OX[0], H + 1.8, z), (x + OX[0] + 3, H + 1.8, z)], 0.18, "metal_steel", verts=8)
+    if dish:
+        dx, dz = W / 2 - 3, -D / 2 + 3
+        box((0.3, 2.2, 0.3), (dx + OX[0], H + 1.1, dz), "metal_steel", bev=0, segs=1)
+        lathe([(0.05, 0), (0.9, 0.35), (1.3, 0.6)], (dx + OX[0], H + 2.3, dz), "plastic_grey", verts=16, rot=(55, 30, 0))
+    tube([(W / 2 - 2 + OX[0], H, D / 2 - 2), (W / 2 - 2 + OX[0], H + 9, D / 2 - 2)], 0.08, "metal_steel", verts=6)
+    for k in (5, 7.5):
+        box((1.6, 0.06, 0.06), (W / 2 - 2 + OX[0], H + k, D / 2 - 2), "metal_steel", bev=0, segs=1)
+    if tank:
+        water_tank(W / 4 + OX[0], H, D / 4)
+
+
+def blade_sign(u, y, text, W, D, mat="neon_pink", board="metal_black", length=None, size=1.5):
+    """Projecting sign on the front face: bracket, board perpendicular to the street, neon letters on
+    both sides (seen by people walking along the sidewalk)."""
+    L = length or max(4.0, len(text) * size * 0.7 + 1.2)
+    z = D / 2 + L / 2 + 0.6
+    x = u + OX[0]
+    box((0.2, 0.2, L + 0.8), (x, y + 1.6, D / 2 + (L + 0.8) / 2), "metal_black", bev=0, segs=1)
+    box((0.4, size * 1.6, L), (x, y, z), board, bev=0.05, segs=1)
+    for side in (-1, 1):
+        neon_text(text, size, (x + side * 0.26, y - size * 0.1, z), mat, tube_radius=0.07, rot=(0, 90 * side, 0))
 
 
 def door(face, u, W, D, w=4, h=7.5, mat="wood_dark", y0=0.0):
     leaf = DOOR_LEAF.get(mat, mat)  # own mesh: replaced in game by a door that opens
     box(_face_size(face, w, h, 0.2), _face_point(face, u, y0 + h / 2, W, D, 0.08), leaf, bev=0.02, segs=1)
-    box(_face_size(face, w + 1, 0.5, 0.5), _face_point(face, u, y0 + h + 0.25, W, D, 0.2), "trim_light", bev=0, segs=1)
-    for du in (-w / 2 - 0.25, w / 2 + 0.25):
-        box(_face_size(face, 0.5, h, 0.5), _face_point(face, u + du, y0 + h / 2, W, D, 0.2), "trim_light", bev=0, segs=1)
+    box(_face_size(face, w + 1.4, 0.7, 0.6), _face_point(face, u, y0 + h + 0.35, W, D, 0.25), "trim_light", bev=0, segs=1)
+    for du in (-w / 2 - 0.35, w / 2 + 0.35):
+        box(_face_size(face, 0.7, h, 0.6), _face_point(face, u + du, y0 + h / 2, W, D, 0.25), "trim_light", bev=0, segs=1)
     box(_face_size(face, 0.15, 0.15, 0.3), _face_point(face, u + w / 2 - 0.5, y0 + h * 0.5, W, D, 0.3), "chrome", bev=0, segs=1)
+    box(_face_size(face, w + 2.4, 0.3, 1.6), _face_point(face, u, y0 + 0.15, W, D, 0.8), "concrete", bev=0.03, segs=1)  # step
+
+
+DOOR_LEAF = {"wood_dark": "door_wood", "window_glass": "door_glass", "metal_dark": "door_metal"}
 
 
 def awning(face, u, y, w, W, D, depth=3.5):
     fx, fy, fz = _face_point(face, u, y, W, D, depth / 2)
     rot = {"front": (-20, 0, 0), "back": (20, 0, 0), "right": (0, 0, 20), "left": (0, 0, -20)}[face]
     box(_face_size(face, w, 0.2, depth), (fx, fy, fz), "awning", bev=0, segs=1, rot=rot)
+    # valance hanging at the front edge
+    ex, ey, ez = _face_point(face, u, y - math.sin(math.radians(20)) * depth / 2 - 0.4, W, D, depth * 0.95)
+    box(_face_size(face, w, 0.8, 0.08), (ex, ey, ez), "awning", bev=0, segs=1)
+    for du in (-w / 2, w / 2):
+        tube([_face_point(face, u + du, y + 0.4, W, D, 0.1), _face_point(face, u + du, y - 1.0, W, D, depth * 0.95)], 0.05, "metal_dark", verts=6)
+
+
+def storefront(u, w, W, D, h=7.5, shutter=0.0, bars=False):
+    """Shop window: kickplate, glass, mullions, fascia. shutter = fraction rolled down; bars = grille."""
+    _fbox("front", u, 0.6, w + 1, 1.2, 0.5, 0.25, W, D, "trim_dark")
+    _fbox("front", u, 1.2 + (h - 1.2) / 2, w, h - 1.2, 0.12, 0.06, W, D, "window_glass")
+    n = max(1, int(w // 5))
+    for i in range(n + 1):
+        _fbox("front", u - w / 2 + i * w / n, 1.2 + (h - 1.2) / 2, 0.35, h - 1.2, 0.35, 0.2, W, D, "trim_dark")
+    _fbox("front", u, h + 0.5, w + 1, 1.0, 0.5, 0.25, W, D, "trim_dark")
+    if shutter > 0:
+        sh = (h - 1.2) * shutter
+        _fbox("front", u, h - sh / 2, w, sh, 0.12, 0.35, W, D, "metal_dark")
+        k = int(sh / 0.35)
+        for i in range(k):
+            _fbox("front", u, h - 0.2 - i * 0.35, w, 0.06, 0.05, 0.45, W, D, "metal_black")
+        _fbox("front", u, h - sh, w, 0.2, 0.2, 0.45, W, D, "metal_steel")
+    if bars:
+        for i in range(int(w // 0.7) + 1):
+            _fbox("front", u - w / 2 + i * 0.7, 1.2 + (h - 1.2) / 2, 0.1, h - 1.2, 0.1, 0.45, W, D, "metal_black")
+        for yy in (2.2, h - 0.8):
+            _fbox("front", u, yy, w, 0.12, 0.12, 0.45, W, D, "metal_black")
 
 
 # Buildings --------------------------------------------------------------------------------------------
+
+def brick_block(W, D, H, floors, fh, rng, frame="trim_light", dentils=True):
+    """What every old brick building shares: plinth, bands, corner stones, crown, drainpipes."""
+    plinth(W, D)
+    for f in range(1, floors):
+        band(W, D, f * fh - 0.2, frame, h=0.45, depth=0.3)
+    quoins(W, D, H, frame)
+    cornice(W, D, H - 0.5, frame, dentils=dentils)
+    drainpipe(W / 2 - 0.8 + OX[0], D / 2 + 0.5, H - 0.6)
+    drainpipe(-W / 2 + 0.8 + OX[0], -D / 2 - 0.5, H - 0.6)
+
+
+def fire_escape(x0, x1, floors, fh, D):
+    """Landings with railings and slanted ladders on the front face."""
+    z = D / 2
+    for f in range(1, floors):
+        y = f * fh + 0.3
+        box((x1 - x0, 0.25, 3), ((x0 + x1) / 2 + OX[0], y, z + 1.6), "metal_black", bev=0, segs=1)
+        for i in range(int((x1 - x0) // 0.8) + 1):
+            box((0.06, 0.06, 2.9), (x0 + i * 0.8 + OX[0], y + 0.14, z + 1.6), "metal_black", bev=0, segs=1)
+        tube([(x0 + OX[0], y, z + 3.05), (x0 + OX[0], y + 3, z + 3.05), (x1 + OX[0], y + 3, z + 3.05), (x1 + OX[0], y, z + 3.05)], 0.07, "metal_black", verts=6)
+        tube([(x0 + OX[0], y + 1.5, z + 3.05), (x1 + OX[0], y + 1.5, z + 3.05)], 0.05, "metal_black", verts=6)
+        for i in range(int((x1 - x0) // 1.2) + 1):
+            box((0.05, 3, 0.05), (x0 + i * 1.2 + OX[0], y + 1.5, z + 3.05), "metal_black", bev=0, segs=1)
+        for sx in (x0, x1):
+            box((0.12, 0.12, 3), (sx + OX[0], y - 0.3, z + 1.6), "metal_black", bev=0, segs=1)  # brackets
+        if f < floors - 1:
+            a = (x1 - 1.2, y + 0.2)
+            b = (x0 + 1.5, y + fh)
+            for side in (0.2, 1.1):
+                tube([(a[0] + OX[0], a[1], z + side + 0.5), (b[0] + OX[0], b[1], z + side + 0.5)], 0.06, "metal_black", verts=6)
+            steps = 10
+            for i in range(1, steps):
+                t = i / steps
+                box((0.9, 0.06, 0.25), (a[0] + (b[0] - a[0]) * t + OX[0], a[1] + (b[1] - a[1]) * t, z + 1.1), "metal_black", bev=0, segs=1)
+
 
 @city_asset
 def bld_apartment():
@@ -116,61 +304,121 @@ def bld_apartment():
     W, D, H = a["w"], a["d"], a["h"]
     rng = random.Random(11)
     floors, fh = 4, H / 4
-    for face in ("front", "back"):
-        window_grid(face, W, D, floors, fh, 5, 1, 3.2, 5.5, rng)
-        window_grid(face, W, D, 1, fh, 5, 0, 3.2, 5.5, rng) if face == "back" else None
+    window_grid("front", W, D, floors, fh, 5, 1, 3.2, 5.5, rng, ac_chance=0.2)
+    window_grid("back", W, D, floors, fh, 5, 0, 3.2, 5.5, rng, ac_chance=0.15)
     for face in ("left", "right"):
         window_grid(face, W, D, floors, fh, 3, 0, 3.0, 5.5, rng)
-    # ground floor front: entrance + two windows
     dr = a["door"]
     door("front", dr["x"], W, D, w=dr["w"], h=dr["h"])
     box((9, 0.4, 4), (0, 9.2, D / 2 + 2), "trim_dark", bev=0, segs=1)
+    for dx in (-4.2, 4.2):
+        tube([(dx, 9.2, D / 2 + 3.8), (dx, 10.5, D / 2 + 0.3)], 0.06, "metal_black", verts=6)
+    lathe([(0.1, 0.4), (0.35, 0.1), (0.3, -0.3), (0.0, -0.4)], (0, 8.8, D / 2 + 2), "lamp_lens", verts=10)
     for u in (-13, 13):
-        window("front", u, 5, 6, 5, W, D, lit=True)
-    # fire escape
-    for f in range(1, floors):
-        y = f * fh
-        box((12, 0.3, 3), (-8, y, D / 2 + 1.6), "metal_black", bev=0, segs=1)
-        tube([(-14, y, D / 2 + 3), (-14, y + 3, D / 2 + 3), (-2, y + 3, D / 2 + 3), (-2, y, D / 2 + 3)], 0.08, "metal_black", verts=6)
-        if f < floors - 1:
-            tube([(-3, y + 0.2, D / 2 + 1.6), (-12, y + fh, D / 2 + 1.6)], 0.12, "metal_black", verts=6)
-    cornice(W, D, H - 0.4)
+        window("front", u, 5, 6, 5, W, D, lit=True, style="classic")
+    brick_block(W, D, H, floors, fh, rng)
+    fire_escape(-14, -2, floors, fh, D)
     parapet(W, D, H)
-    cyl(3, 6, (8, H + 7, -4), "wood_worn", bev=0.1, verts=16)
-    lathe([(3.2, 0), (0.1, 2)], (8, H + 10, -4), "metal_dark", verts=16)
-    for dx in (-2, 2):
-        for dz in (-2, 2):
-            box((0.3, 4, 0.3), (8 + dx, H + 2, -4 + dz), "metal_black", bev=0, segs=1)
-    ac_unit(-10, H, -6)
-    ac_unit(-4, H, 6)
-    box((5, 4, 4), (14, H + 2, 8), "concrete", bev=0.05, segs=1)
+    roof_clutter(W, D, H, rng, count=5, tank=True)
 
 
 @city_asset
-def bld_shop():
-    a = ARCH["shop"]
+def bld_apartment_b():
+    """Variant: balconies on the front, paired windows, flat modern crown."""
+    a = ARCH["apartment"]
     W, D, H = a["w"], a["d"], a["h"]
-    rng = random.Random(12)
-    # storefront
-    box((W - 8, 7, 0.15), (-2, 4.5, D / 2 + 0.06), "window_glass", bev=0, segs=1)
-    box((W - 7, 0.5, 0.5), (-2, 8.2, D / 2 + 0.2), "trim_dark", bev=0, segs=1)
-    box((W - 7, 1, 0.5), (-2, 0.5, D / 2 + 0.2), "trim_dark", bev=0, segs=1)
-    for u in (-W / 2 + 4, -2, W / 2 - 8):
-        box((0.4, 7.5, 0.4), (u, 4.5, D / 2 + 0.2), "trim_dark", bev=0, segs=1)
+    rng = random.Random(111)
+    floors, fh = 4, H / 4
+    for f in range(1, floors):
+        y = f * fh + fh * 0.55
+        for u in (-12, 12):
+            # balcony: slab, railing, glass door
+            box((9, 0.4, 3.2), (u, f * fh + 0.2, D / 2 + 1.6), "concrete", bev=0.03, segs=1)
+            tube([(u - 4.4, f * fh + 0.4, D / 2 + 3.1), (u - 4.4, f * fh + 3.4, D / 2 + 3.1), (u + 4.4, f * fh + 3.4, D / 2 + 3.1), (u + 4.4, f * fh + 0.4, D / 2 + 3.1)], 0.08, "metal_black", verts=6)
+            for i in range(12):
+                box((0.06, 3, 0.06), (u - 4.2 + i * 0.76, f * fh + 1.9, D / 2 + 3.1), "metal_black", bev=0, segs=1)
+            window("front", u - 2, y - 0.6, 2.4, 7, W, D, lit=rng.random() < 0.35, style="modern", sill=False)
+            window("front", u + 2, y, 2.6, 5, W, D, lit=rng.random() < 0.35, style="modern")
+        window("front", 0, y, 3, 5, W, D, lit=rng.random() < 0.3, style="modern")
+    window_grid("back", W, D, floors, fh, 6, 0, 2.8, 5, rng, style="modern", ac_chance=0.25)
+    for face in ("left", "right"):
+        window_grid(face, W, D, floors, fh, 3, 0, 2.8, 5, rng, style="modern")
     dr = a["door"]
     door("front", dr["x"], W, D, w=dr["w"], h=dr["h"], mat="window_glass")
-    awning("front", -2, 9.8, W - 6, W, D)
+    box((10, 0.5, 4.5), (0, 9.2, D / 2 + 2.25), "concrete", bev=0.03, segs=1)
+    for u in (-13, 13):
+        window("front", u, 5, 6, 5, W, D, lit=True, style="modern")
+    plinth(W, D, h=1.2, mat="concrete")
+    for f in range(1, floors):
+        band(W, D, f * fh - 0.2, "concrete", h=0.6, depth=0.25)
+    drainpipe(W / 2 - 0.8, D / 2 + 0.5, H - 0.6)
+    parapet(W, D, H, "concrete", h=1.2)
+    roof_clutter(W, D, H, rng, count=6)
+
+
+def shop_upper(W, D, H, rng, frame="trim_light"):
     window_grid("front", W, D, 2, H / 2, 4, 1, 3.5, 5, rng)
     window_grid("back", W, D, 2, H / 2, 4, 1, 3.5, 5, rng)
     for face in ("left", "right"):
         window_grid(face, W, D, 2, H / 2, 2, 1, 3, 5, rng)
-    cornice(W, D, H - 0.4, "trim_dark")
-    parapet(W, D, H, "trim_dark", h=1)
-    ac_unit(-6, H, -4)
-    ac_unit(4, H, -6)
+    band(W, D, H / 2 - 0.2, frame, h=0.5)
+    quoins(W, D, H, frame, y0=H / 2)
+    cornice(W, D, H - 0.4, frame, dentils=True)
+    parapet(W, D, H, frame, h=1)
+    drainpipe(W / 2 - 0.6, D / 2 + 0.5, H - 0.5)
 
 
-def glass_tower(W, D, H, floor_h, rng, crown=True, lobby_h=None, dr=None):
+@city_asset
+def bld_shop():
+    """Liquor store: glass front half shuttered, awning, blade sign."""
+    a = ARCH["shop"]
+    W, D, H = a["w"], a["d"], a["h"]
+    rng = random.Random(12)
+    dr = a["door"]
+    storefront(-4, W - 14, W, D, shutter=0.35)
+    door("front", dr["x"], W, D, w=dr["w"], h=dr["h"], mat="window_glass")
+    awning("front", -4, 9.8, W - 12, W, D)
+    blade_sign(W / 2 - 1.5, 13.5, "LIQUOR", W, D, "neon_blue")
+    shop_upper(W, D, H, rng)
+    roof_clutter(W, D, H, rng, count=3, dish=True)
+
+
+@city_asset
+def bld_shop_b():
+    """Pawn shop: barred windows, roller shutter, red neon."""
+    a = ARCH["shop"]
+    W, D, H = a["w"], a["d"], a["h"]
+    rng = random.Random(121)
+    dr = a["door"]
+    storefront(-4, W - 14, W, D, bars=True)
+    door("front", dr["x"], W, D, w=dr["w"], h=dr["h"], mat="metal_dark")
+    blade_sign(W / 2 - 1.5, 13.5, "PAWN", W, D, "neon_red")
+    box((W - 12, 1.4, 1.2), (-4, 9.6, D / 2 + 0.6), "metal_dark", bev=0.05, segs=1)  # shutter box
+    shop_upper(W, D, H, rng, frame="concrete")
+    roof_clutter(W, D, H, rng, count=4, dish=False)
+
+
+@city_asset
+def bld_shop_c():
+    """Diner: big windows, chrome band, neon."""
+    a = ARCH["shop"]
+    W, D, H = a["w"], a["d"], a["h"]
+    rng = random.Random(122)
+    dr = a["door"]
+    storefront(-4, W - 14, W, D, h=7)
+    door("front", dr["x"], W, D, w=dr["w"], h=dr["h"], mat="window_glass")
+    for y in (7.9, 8.4):
+        box((W + 0.4, 0.25, 0.3), (0, y, D / 2 + 0.3), "chrome", bev=0.05, segs=1)
+    awning("front", -4, 9.8, W - 12, W, D, depth=2.5)
+    blade_sign(W / 2 - 1.5, 13.5, "DINER", W, D, "neon_pink")
+    shop_upper(W, D, H, rng)
+    roof_clutter(W, D, H, rng, count=4)
+    for i in range(3):
+        cyl(0.6, 3, (-8 + i * 3, H + 1.5, -6), "metal_steel", bev=0.05, verts=10)  # kitchen exhausts
+
+
+def glass_tower(W, D, H, floor_h, rng, crown=True, lobby_h=None, dr=None, spandrel="concrete", fins=4):
+    """Curtain wall: glass per floor, spandrel band between floors, vertical fins, lobby, crown."""
     lobby_h = lobby_h or floor_h
     floors = int(H // floor_h)
     for f in range(1, floors):
@@ -179,25 +427,31 @@ def glass_tower(W, D, H, floor_h, rng, crown=True, lobby_h=None, dr=None):
         y = f * floor_h + floor_h * 0.5
         for face in ("front", "back", "left", "right"):
             length = W if face in ("front", "back") else D
-            box(_face_size(face, length - 1, floor_h * 0.62, 0.2), _face_point(face, 0, y, W, D, 0.08), "window_lit" if rng.random() < 0.25 else "window_glass", bev=0, segs=1)
+            _fbox(face, 0, y + 0.3, length - 1, floor_h * 0.66, 0.2, 0.08, W, D, "window_lit" if rng.random() < 0.25 else "window_glass")
+            _fbox(face, 0, f * floor_h + 0.35, length - 0.2, floor_h * 0.28, 0.3, 0.16, W, D, spandrel)
     for face in ("front", "back", "left", "right"):
         length = W if face in ("front", "back") else D
-        n = int(length // 4)
+        n = int(length // fins)
         for i in range(n + 1):
             u = -length / 2 + 0.5 + i * (length - 1) / n
-            box(_face_size(face, 0.35, H - lobby_h, 0.35), _face_point(face, u, lobby_h + (H - lobby_h) / 2, W, D, 0.2), "trim_dark", bev=0, segs=1)
-    # lobby
-    box((W * 0.6, lobby_h - 1, 0.15), (0, lobby_h / 2, D / 2 + 0.06), "window_glass", bev=0, segs=1)
+            _fbox(face, u, lobby_h + (H - lobby_h) / 2, 0.35, H - lobby_h, 0.6, 0.3, W, D, "trim_dark")
+    # lobby: tall glass, stone base, canopy
+    _fbox("front", 0, lobby_h / 2, W * 0.6, lobby_h - 1, 0.15, 0.06, W, D, "window_glass")
+    for u in (-W * 0.3 - 1.5, W * 0.3 + 1.5):
+        _fbox("front", u, lobby_h / 2, 3, lobby_h, 0.6, 0.3, W, D, "trim_light")
     box((W * 0.7, 0.6, 5), (0, lobby_h, D / 2 + 2.5), "trim_dark", bev=0, segs=1)
+    box((W * 0.7, 0.1, 4.6), (0, lobby_h - 0.35, D / 2 + 2.5), "lamp_lens", bev=0, segs=1)
     dr = dr or {"x": 0, "w": 6, "h": lobby_h - 1.5}
     door("front", dr["x"], W, D, w=dr["w"], h=dr["h"], mat="window_glass")
+    plinth(W, D, h=1.0, mat="trim_light")
     parapet(W, D, H, "trim_dark", h=1.2)
     if crown:
         box((W * 0.6, 6, D * 0.6), (0, H + 3, 0), "concrete", bev=0.1, segs=1)
+        for face in ("front", "back"):
+            box((W * 0.6 - 2, 3, 0.2), (0, H + 3, (D * 0.3 + 0.1) * (1 if face == "front" else -1)), "metal_dark", bev=0, segs=1)
         cyl(0.4, 22, (0, H + 17, 0), "metal_steel", bev=0.05, verts=8)
         lathe([(0.8, 0), (0.8, 0.8), (0, 1.2)], (0, H + 28, 0), "neon_red", verts=12)
-    for i in range(3):
-        ac_unit(-W / 3 + i * 6, H, -D / 3)
+    roof_clutter(W, D, H, rng, count=4, dish=True)
 
 
 @city_asset
@@ -207,42 +461,67 @@ def bld_office():
 
 
 @city_asset
+def bld_office_b():
+    """Variant: stone-clad, narrower fins, dark spandrels."""
+    a = ARCH["office"]
+    glass_tower(a["w"], a["d"], a["h"], 5, random.Random(131), crown=False, lobby_h=a["interior"]["height"], dr=a["door"], spandrel="trim_light", fins=2.6)
+
+
+@city_asset
 def bld_tower():
     a = ARCH["tower"]
     glass_tower(a["w"], a["d"], a["h"], 5, random.Random(14), crown=True, lobby_h=a["interior"]["height"], dr=a["door"])
 
 
 @city_asset
+def bld_tower_b():
+    a = ARCH["tower"]
+    glass_tower(a["w"], a["d"], a["h"], 5, random.Random(141), crown=True, lobby_h=a["interior"]["height"], dr=a["door"], spandrel="metal_dark", fins=3)
+
+
+@city_asset
 def bld_warehouse():
     a = ARCH["warehouse"]
     W, D, H = a["w"], a["d"], a["h"]
+    rng = random.Random(18)
     for u in (-14, 14):
+        # roller doors with their frame, dock and bumpers
         box((14, 14, 0.3), (u, 7, D / 2 + 0.1), "metal_steel", bev=0, segs=1)
         for i in range(14):
             box((14, 0.12, 0.35), (u, 0.5 + i, D / 2 + 0.3), "metal_dark", bev=0, segs=1)
         box((16, 0.8, 0.8), (u, 14.4, D / 2 + 0.4), "trim_dark", bev=0, segs=1)
+        for du in (-7.6, 7.6):
+            box((0.8, 14, 0.8), (u + du, 7, D / 2 + 0.4), "trim_dark", bev=0, segs=1)
         box((1, 0.6, 1), (u, 16, D / 2 + 0.6), "lamp_lens", bev=0, segs=1)
+        for du in (-5, 5):
+            box((1.4, 2, 0.8), (u + du, 1.5, D / 2 + 0.5), "rubber", bev=0.1, segs=1)
+    # ribbed cladding: vertical ribs on the sides and back
     for face in ("left", "right", "back"):
         length = W if face == "back" else D
-        box(_face_size(face, length - 6, 2, 0.15), _face_point(face, 0, H - 4, W, D, 0.06), "window_glass", bev=0, segs=1)
+        n = int(length // 3)
+        for i in range(n + 1):
+            _fbox(face, -length / 2 + 0.5 + i * (length - 1) / n, H / 2, 0.3, H - 1, 0.3, 0.15, W, D, "metal_dark")
+        _fbox(face, 0, H - 4, length - 6, 2, 0.15, 0.3, W, D, "window_glass")
     dr = a["door"]
     door("front", dr["x"], W, D, w=dr["w"], h=dr["h"], mat="metal_dark")
+    _fbox("front", 0, H - 5, 10, 3, 0.2, 0.2, W, D, "paint_red")  # company panel
     for i in range(4):
         cyl(1.2, 2.5, (-20 + i * 13, H + 1.25, 0), "metal_steel", bev=0.1, verts=12)
         lathe([(1.6, 0), (0.1, 0.8)], (-20 + i * 13, H + 2.5, 0), "metal_dark", verts=12)
+    for i in range(3):
+        box((8, 1.2, 4), (-16 + i * 16, H + 0.6, -10), "window_glass", bev=0.05, segs=1)  # skylights
+        box((8.4, 0.3, 4.4), (-16 + i * 16, H + 0.15, -10), "metal_dark", bev=0, segs=1)
     box((W, 0.8, 0.8), (0, H - 0.4, D / 2 + 0.4), "trim_dark", bev=0, segs=1)
-    for u in (-24, -4, 4, 24):
-        box((1.4, 2, 0.8), (u, 1.5, D / 2 + 0.5), "rubber", bev=0.1, segs=1)
+    drainpipe(W / 2 - 1, D / 2 + 0.5, H - 0.5)
+    drainpipe(-W / 2 + 1, D / 2 + 0.5, H - 0.5)
+    tube([(-W / 2 + 2, 3, -D / 2 - 1), (W / 2 - 2, 3, -D / 2 - 1)], 0.35, "metal_rust", verts=10)  # pipe run
+    del rng
 
 
-@city_asset
-def bld_chinatown():
-    a = ARCH["chinatown"]
-    W, D, H = a["w"], a["d"], a["h"]
-    rng = random.Random(15)
+def chinatown_block(W, D, H, rng, sign, sign_mat):
     fh = H / 3
-    box((W - 6, 6.5, 0.15), (-1, 4, D / 2 + 0.06), "window_glass", bev=0, segs=1)
-    dr = a["door"]
+    storefront(-1, W - 8, W, D, h=7)
+    dr = ARCH["chinatown"]["door"]
     door("front", dr["x"], W, D, w=dr["w"], h=dr["h"], mat="wood_dark")
     awning("front", -1, 9.5, W - 4, W, D, depth=3)
     for f in (1, 2):
@@ -252,16 +531,34 @@ def bld_chinatown():
         for i in range(8):
             u = -W / 2 + 1.5 + i * (W - 3) / 7
             box((0.15, 3, 0.15), (u, y + 1.5, D / 2 + 3), "paint_red", bev=0, segs=1)
-    window_grid("front", W, D, 3, fh, 3, 1, 3, 4.5, rng, lit_chance=0.5, frame="paint_red")
-    window_grid("back", W, D, 3, fh, 3, 1, 3, 4.5, rng, lit_chance=0.4)
+    window_grid("front", W, D, 3, fh, 3, 1, 3, 4.5, rng, lit_chance=0.5, frame="paint_red", style="plain")
+    window_grid("back", W, D, 3, fh, 3, 1, 3, 4.5, rng, lit_chance=0.4, style="plain", ac_chance=0.3)
     for face in ("left", "right"):
-        window_grid(face, W, D, 3, fh, 2, 1, 2.6, 4.5, rng)
-    # tiled roof edge + lanterns
+        window_grid(face, W, D, 3, fh, 2, 1, 2.6, 4.5, rng, style="plain")
+    # tiled roof with upturned eaves + lanterns
     box((W + 3, 1.2, D + 3), (0, H + 0.2, 0), "roof_green", bev=0.2, segs=1)
     box((W + 1, 1.6, D + 1), (0, H + 1.2, 0), "roof_green", bev=0.3, segs=1)
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            tube([(sx * (W / 2 + 1.4), H + 0.7, sz * (D / 2 + 1.4)), (sx * (W / 2 + 2.2), H + 1.6, sz * (D / 2 + 2.2))], 0.25, "roof_green", verts=6)
+    box((W + 3.4, 0.3, 0.3), (0, H - 0.5, D / 2 + 1.6), "paint_red", bev=0, segs=1)
     for u in (-W / 2 + 4, 0, W / 2 - 4):
         tube([(u, 11, D / 2 + 3.3), (u, 10, D / 2 + 3.3)], 0.04, "metal_black", verts=6)
         lathe([(0.2, -0.9), (0.7, -0.6), (0.8, 0), (0.7, 0.6), (0.2, 0.9)], (u, 9.1, D / 2 + 3.3), "neon_red", verts=12)
+    blade_sign(W / 2 - 1.2, 15, sign, W, D, sign_mat, board="paint_red", size=1.3)
+    drainpipe(W / 2 - 0.6, D / 2 + 0.5, H - 0.5)
+
+
+@city_asset
+def bld_chinatown():
+    a = ARCH["chinatown"]
+    chinatown_block(a["w"], a["d"], a["h"], random.Random(15), "TEA", "neon_green")
+
+
+@city_asset
+def bld_chinatown_b():
+    a = ARCH["chinatown"]
+    chinatown_block(a["w"], a["d"], a["h"], random.Random(151), "NOODLES", "neon_orange")
 
 
 @city_asset
@@ -282,7 +579,11 @@ def bld_mansion():
     dr = a["door"]
     door("front", dr["x"], W, D, w=dr["w"], h=dr["h"], mat="wood_dark")
     for face in ("left", "right", "back"):
-        window_grid(face, W, D, 2, H / 2, 3, 0, 6, 6, random.Random(16), lit_chance=0.3, frame="trim_dark")
+        window_grid(face, W, D, 2, H / 2, 3, 0, 6, 6, random.Random(16), lit_chance=0.3, frame="trim_dark", style="modern")
+    plinth(W, D, h=0.8, mat="trim_light")
+    for x in (-W / 2 - 3, W / 2 + 3):
+        lathe([(1.2, 0), (1.0, 1.2), (1.3, 1.4), (0, 1.5)], (x, 0, D / 2 + 4), "concrete", verts=16)  # planters
+        lathe([(0.2, 1.4), (1.1, 2.5), (0.9, 3.4), (0, 3.6)], (x, 0, D / 2 + 4), "leaf", verts=10)
 
 
 @city_asset
@@ -299,7 +600,10 @@ def bld_ruin():
         length = W if face in ("front", "back") else D
         for i in range(3):
             u = -length / 2 + (i + 0.5) * length / 3
-            box(_face_size(face, 4, 5, 0.2), _face_point(face, u, 10, W, D, 0.06), "metal_black", bev=0, segs=1)
+            _fbox(face, u, 10, 4, 5, 0.2, 0.06, W, D, "metal_black")
+            _fbox(face, u, 12.9, 5, 0.6, 0.4, 0.2, W, D, "concrete")
+            for k in range(4):  # boards nailed over the holes
+                _fbox(face, u + rng.uniform(-0.3, 0.3), 8.4 + k * 1.1, 4.6, 0.5, 0.12, 0.2, W, D, "wood_worn")
     for i in range(12):
         x, z = rng.uniform(-W / 2 - 4, W / 2 + 4), rng.uniform(D / 2 + 1, D / 2 + 6)
         if abs(x - a["door"]["x"]) < a["door"]["w"] / 2 + 3:
@@ -542,12 +846,12 @@ def house_shack():
     # windows: front living room, sides, back (the house box spans x -25..33, z -25..25)
     OX[0] = 4.0
     for x in (-16, -4, 8):
-        window("front", x - 4, G + 6, 4.5, 5, 58, 50, lit=x == -4, frame="trim_light")
+        window("front", x - 4, G + 6, 4.5, 5, 58, 50, lit=x == -4, frame="trim_light", style="plain")
     for face in ("left", "right"):
         for u in (-12, 10):
-            window(face, u, G + 6, 4, 5, 58, 50, lit=False, frame="trim_light")
+            window(face, u, G + 6, 4, 5, 58, 50, lit=False, frame="trim_light", style="plain")
     for x in (-14, 0, 14):
-        window("back", 4 - x, G + 6, 4, 5, 58, 50, lit=False, frame="trim_light")
+        window("back", 4 - x, G + 6, 4, 5, 58, 50, lit=False, frame="trim_light", style="plain")
     OX[0] = 0.0
     # door frame + open door leaf (the door opens into the hallway)
     box((0.6, 8.4, 0.6), (25.2, G + 4.2, 25.2), "trim_light", bev=0.05, segs=1)
