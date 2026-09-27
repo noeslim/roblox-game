@@ -425,6 +425,29 @@ function CityParts.PropFallback(kind: string): { PartSpec }
 			part("Head", v(1.2, 4.2, 1.5), v(0, 16.3, 10.5), "Metal", "#16171B"),
 			part("Head", v(1.2, 4.2, 1.5), v(0, 16.3, 14.5), "Metal", "#16171B"),
 		}
+	elseif kind == "trash_bags" then
+		return { part("Bags", v(3, 1.4, 2.4), v(0, 0.7, 0), "SmoothPlastic", "#141418", { canCollide = false }) }
+	elseif kind == "dumpster" then
+		return { part("Dumpster", v(7, 4.4, 4), v(0, 2.4, 0), "Metal", "#2F4F3A") }
+	elseif kind == "newspaper" then
+		return { part("Boxes", v(4.6, 3.2, 1.2), v(0, 1.6, 0), "Metal", "#7A1F1F") }
+	elseif kind == "phone_booth" then
+		return { part("Booth", v(2.8, 7.4, 2.2), v(0, 3.7, 0), "Metal", "#2B2D33") }
+	elseif kind == "bus_stop" then
+		return {
+			part("Roof", v(8.8, 0.35, 3.8), v(0, 7.6, 0.1), "Metal", "#2A2A2E"),
+			part("Back", v(8, 5.5, 0.12), v(0, 3.6, -1.5), "Glass", "#1E2A36"),
+			part("Bench", v(5.5, 0.3, 1.3), v(-0.6, 1.8, -0.45), "WoodPlanks", "#6B4A2E"),
+		}
+	elseif kind == "parking_meter" then
+		return { part("Meter", v(0.7, 4.5, 0.5), v(0, 2.25, 0), "Metal", "#8C9099") }
+	elseif kind == "planter" then
+		return {
+			part("Box", v(4, 1.6, 4), v(0, 0.8, 0), "Concrete", "#7A7A7E"),
+			{ name = "Shrub", shape = "Ball", size = v(3.4, 3, 3.4), pos = v(0, 2.6, 0), material = "Grass", color = "#2E6B30", canCollide = false },
+		}
+	elseif kind == "bike_rack" then
+		return { part("Rack", v(5, 2.4, 0.3), v(0, 1.2, 0), "Metal", "#8C9099", { canCollide = false }) }
 	elseif kind == "billboard" then
 		return {
 			part("Leg", v(0.9, 20, 0.9), v(-28 / 3, 10, -0.8), "Metal", "#2B2D33"),

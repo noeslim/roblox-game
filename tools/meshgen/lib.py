@@ -169,7 +169,8 @@ def neon_text(text, size, pos, mat, tube_radius=0.05, rot=(0, 0, 0), font_extrud
     curve.align_y = "CENTER"
     curve.fill_mode = "NONE"
     curve.bevel_depth = tube_radius
-    curve.bevel_resolution = 3
+    curve.bevel_resolution = 0  # 4-sided tubes: signs are seen from afar, a street is full of them
+    curve.resolution_u = 3  # segments per glyph curve (default 12)
     curve.extrude = font_extrude
     ob = bpy.data.objects.new("text", curve)
     bpy.context.scene.collection.objects.link(ob)

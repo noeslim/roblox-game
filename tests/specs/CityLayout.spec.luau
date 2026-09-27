@@ -79,9 +79,35 @@ return function(t)
 		end
 	end)
 
-	t.test("lamps and furniture are on sidewalks, not on roads", function()
+	t.test("street furniture comes from the district lists, several kinds", function()
+		local allowed = {}
+		for _, weights in City.Props.Furniture do
+			for kind in weights do
+				allowed[kind] = true
+			end
+		end
+		local seen = {}
 		for _, p in layout.props do
-			if p.kind == "lamp" or p.kind == "hydrant" or p.kind == "bench" then
+			if allowed[p.kind] then
+				seen[p.kind] = (seen[p.kind] or 0) + 1
+			end
+		end
+		local kinds = 0
+		for _ in seen do
+			kinds += 1
+		end
+		t.truthy(kinds >= 7, "furniture kinds: " .. kinds)
+	end)
+
+	t.test("lamps and furniture are on sidewalks, not on roads", function()
+		local furniture = {}
+		for _, weights in City.Props.Furniture do
+			for kind in weights do
+				furniture[kind] = true
+			end
+		end
+		for _, p in layout.props do
+			if p.kind == "lamp" or furniture[p.kind] and p.kind ~= "trashcan" then
 				for _, r in layout.roads do
 					t.falsy(CityLayout.Contains(r, p.x, p.z), p.kind .. " on a road")
 				end

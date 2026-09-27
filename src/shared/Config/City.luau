@@ -123,6 +123,20 @@ City.Props = {
 	Hydrants = 30,
 	Benches = 20,
 	TrashCans = 40,
+	-- street furniture between two lamps: chance per slot, then a kind picked by district (weights);
+	-- "Streets" = the avenues between districts
+	FurnitureChance = 0.65,
+	Furniture = {
+		Streets = { hydrant = 3, trashcan = 3, bench = 1, trash_bags = 2, newspaper = 1, bus_stop = 1 },
+		Blocks = { hydrant = 2, trashcan = 2, trash_bags = 4, dumpster = 1, phone_booth = 1 },
+		Downtown = { bench = 2, trashcan = 2, parking_meter = 4, newspaper = 2, bus_stop = 1, planter = 2 },
+		Strip = { parking_meter = 3, trash_bags = 3, phone_booth = 1, newspaper = 1, bench = 1 },
+		Chinatown = { trash_bags = 3, newspaper = 2, trashcan = 2, hydrant = 1, bike_rack = 2 },
+		Industrial = { dumpster = 3, trash_bags = 2, hydrant = 2 },
+		Docks = { dumpster = 2, trash_bags = 2, hydrant = 1, trashcan = 1 },
+		RichHills = { planter = 3, bench = 2, hydrant = 1, trashcan = 1 },
+		WarZone = { trash_bags = 2, dumpster = 1 },
+	} :: { [string]: { [string]: number } },
 	-- utility poles and overhead wires along the trap house streets (the hood look)
 	PoleSpacing = 84,
 	PoleHeight = 26, -- the crossarm is 1.5 below the top
