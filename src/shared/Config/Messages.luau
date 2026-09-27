@@ -79,7 +79,7 @@ Messages.Poi = {
 	DeliveryNote = "Phone order: +%d%% delivery. No fee at the SUPPLIER (Docks).",
 	OnSiteNote = "At the supplier: no delivery fee.",
 	BlackMarketTitle = "BLACK MARKET",
-	BlackMarketNote = "Tonight only. New stock every night.",
+	BlackMarketNote = "Tonight only, limited stock: every buy pushes the price up.",
 }
 
 -- Daily streak and contracts (GoalsService / GoalsController)
@@ -113,6 +113,34 @@ Messages.CustomerLines = {
 	Declined = { "Your loss.", "Fine. Keep it." },
 	Cops = { "Cops! I'm out.", "Nah, not with sirens around.", "Too hot here. Later." },
 }
+
+Messages.Market = {
+	NightStart = "Night falls: contraband sells x%.1f, and the street wants %s parts (+%d%%).",
+	Hot = "Wanted tonight: %s parts (+%d%%)",
+	Left = "%d left",
+	SoldOut = "SOLD OUT",
+	Night = "night x%.1f",
+	HotTag = "wanted +%d%%",
+}
+
+-- The extras of a sale (SaleService info): streak, night premium, wanted set, tip.
+function Messages.SaleExtras(info: any): { string }
+	local extra = {}
+	if type(info.combo) == "number" and info.combo > 1 and type(info.multiplier) == "number" then
+		table.insert(extra, ("streak x%.1f"):format(info.multiplier))
+	end
+	local premium = if type(info.premium) == "table" then info.premium else {}
+	if type(premium.night) == "number" then
+		table.insert(extra, Messages.Market.Night:format(premium.night))
+	end
+	if type(premium.hot) == "number" then
+		table.insert(extra, Messages.Market.HotTag:format(math.floor((premium.hot - 1) * 100 + 0.5)))
+	end
+	if type(info.tip) == "number" and info.tip > 0 then
+		table.insert(extra, ("tip $%d"):format(info.tip))
+	end
+	return extra
+end
 
 Messages.Raid = {
 	Patrol = "A patrol car is cruising your block. Keep it low.",

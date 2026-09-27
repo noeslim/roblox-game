@@ -8,7 +8,6 @@ local Economy = require(Shared.Config.Economy)
 local Parts = require(Shared.Config.Parts)
 local Inventory = require(Shared.Logic.Inventory)
 local Shop = require(Shared.Logic.Shop)
-local BlackMarket = require(Shared.Logic.BlackMarket)
 local WeaponCrafting = require(Shared.Logic.WeaponCrafting)
 local DataService = require(script.Parent.DataService)
 local BuildService = require(script.Parent.BuildService)
@@ -16,7 +15,7 @@ local GoalsService = require(script.Parent.GoalsService)
 local PoiService = require(script.Parent.PoiService)
 local ServerNet = require(script.Parent.Parent.Lib.ServerNet)
 local AnimServer = require(script.Parent.Parent.Lib.AnimServer)
-local WorldService = require(script.Parent.WorldService)
+local MarketService = require(script.Parent.MarketService)
 
 local CraftService = {}
 
@@ -98,10 +97,6 @@ local function isNight(): boolean
 	return ReplicatedStorage:GetAttribute("Phase") == "Night"
 end
 
-local function blackMarketStock()
-	return BlackMarket.Stock(BlackMarket.NightIndex(WorldService.Now(), Economy.DayNight), Parts, Economy)
-end
-
 -- source: "supplier" (default: on site, or by phone with the delivery fee) or "blackmarket"
 -- (contraband, at night, at the black market only)
 local function buyPart(player: Player, partId: any, amount: any, source: any): (boolean, any)
@@ -126,11 +121,11 @@ local function buyPart(player: Player, partId: any, amount: any, source: any): (
 		if not PoiService.IsNear(player, "BlackMarket") then
 			return false, "TooFarFromPoi"
 		end
-		local offer = BlackMarket.Find(blackMarketStock(), partId)
-		if offer == nil then
-			return false, "SoldOut"
+		local cost, err = MarketService.Quote(partId, amount)
+		if cost == nil then
+			return false, err
 		end
-		unitPrice = offer.price
+		unitPrice = cost / amount
 	else
 		unitPrice = Shop.PartPrice(Parts[partId], Economy, PoiService.IsNear(player, "Supplier"))
 	end
@@ -143,6 +138,9 @@ local function buyPart(player: Player, partId: any, amount: any, source: any): (
 	local ok, err = ledger:Withdraw(unitPrice * amount, (if black then "blackmarket:" else "supplier:") .. partId)
 	if not ok then
 		return false, err
+	end
+	if black then
+		MarketService.Record(partId, amount)
 	end
 	Inventory.Add(data.Parts, partId, amount, Economy.Profile.MaxPartStack)
 	DataService.Sync(player)
@@ -173,7 +171,7 @@ function CraftService:Start()
 		if not PoiService.IsNear(player, "BlackMarket") then
 			return false, "TooFarFromPoi"
 		end
-		return true, blackMarketStock()
+		return true, MarketService.Offers()
 	end)
 	ServerNet.Handle("RequestSetPrice", setPrice)
 	ServerNet.Handle("RequestSnapshot", function(player: Player)

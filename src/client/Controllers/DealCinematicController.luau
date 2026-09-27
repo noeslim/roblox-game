@@ -12,6 +12,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Cinematics = require(Shared.Config.Cinematics)
+local Messages = require(Shared.Config.Messages)
 local Parts = require(Shared.Config.Parts)
 local DealScene = require(Shared.Logic.DealScene)
 local ModelFactory = require(Shared.Visual.ModelFactory)
@@ -38,13 +39,7 @@ local function revealCard(info: any): ScreenGui
 	local frame = UI.new("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -40), Size = UDim2.fromOffset(420, 78), BackgroundTransparency = 1, Parent = gui })
 	UI.Label({ Size = UDim2.new(1, 0, 0, 32), Text = "SOLD  " .. UI.Money(tonumber(info.total) or 0), Font = UI.Theme.FontBlack, TextSize = 28, TextColor3 = UI.Theme.Money, TextStrokeTransparency = 0.5, Parent = frame })
 	UI.Label({ Position = UDim2.fromOffset(0, 34), Size = UDim2.new(1, 0, 0, 20), Text = string.upper(tostring(info.weaponName or "")), Font = UI.Theme.FontBlack, TextSize = 16, TextColor3 = UI.RarityColor(tostring(info.rarity)), TextStrokeTransparency = 0.5, Parent = frame })
-	local extra = {}
-	if type(info.combo) == "number" and info.combo > 1 and type(info.multiplier) == "number" then
-		table.insert(extra, ("streak x%.1f"):format(info.multiplier))
-	end
-	if type(info.tip) == "number" and info.tip > 0 then
-		table.insert(extra, "tip " .. UI.Money(info.tip))
-	end
+	local extra = Messages.SaleExtras(info)
 	if #extra > 0 then
 		UI.Label({ Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 0, 18), Text = table.concat(extra, "  ·  "), TextSize = 15, TextColor3 = UI.Theme.Warning, TextStrokeTransparency = 0.5, Parent = frame })
 	end

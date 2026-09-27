@@ -10,6 +10,7 @@ local DataService = require(script.Parent.DataService)
 local CustomerService = require(script.Parent.CustomerService)
 local GoalsService = require(script.Parent.GoalsService)
 local RaidService = require(script.Parent.RaidService)
+local MarketService = require(script.Parent.MarketService)
 local ServerNet = require(script.Parent.Parent.Lib.ServerNet)
 local AnimServer = require(script.Parent.Parent.Lib.AnimServer)
 local Cinematics = require(Shared.Config.Cinematics)
@@ -53,7 +54,9 @@ local function completeSale(player: Player, npc: CustomerService.Npc, weaponId: 
 	if combo then
 		multiplier, comboCount = combo:RegisterSale(os.clock())
 	end
-	local total = math.floor(price * multiplier + 0.5) + tip
+	-- the night street pays more for contraband and for tonight's wanted set (MarketService)
+	local premium, premiumWhy = MarketService.SaleMultiplier(saved.parts, weapon.contraband)
+	local total = math.floor(price * multiplier * premium + 0.5) + tip
 
 	table.remove(data.Weapons, index)
 	ledger:Deposit(total, "sale:" .. weapon.rarity)
@@ -122,6 +125,7 @@ local function completeSale(player: Player, npc: CustomerService.Npc, weaponId: 
 		price = price,
 		tip = tip,
 		multiplier = multiplier,
+		premium = premiumWhy, -- { night = x?, hot = x? }
 		combo = comboCount,
 		total = total,
 		big = total >= CFG.BigSaleTotal,

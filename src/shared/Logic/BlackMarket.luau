@@ -4,7 +4,7 @@
 
 local BlackMarket = {}
 
-export type Offer = { id: string, price: number }
+export type Offer = { id: string, price: number, quantity: number } -- quantity: units for the night
 
 -- Number of the current day+night cycle; the market of one night keeps the same stock.
 function BlackMarket.NightIndex(now: number, dayNight: any): number
@@ -35,7 +35,8 @@ function BlackMarket.Stock(night: number, catalogue: { [string]: any }, economy:
 		local part = catalogue[id]
 		local base = part.value * economy.RarityMultiplier[part.rarity]
 		local price = base * (cfg.PriceMin + (cfg.PriceMax - cfg.PriceMin) * rand())
-		table.insert(offers, { id = id, price = math.max(1, math.floor(price + 0.5)) })
+		local quantity = cfg.QuantityMin + math.floor(rand() * (cfg.QuantityMax - cfg.QuantityMin + 1))
+		table.insert(offers, { id = id, price = math.max(1, math.floor(price + 0.5)), quantity = math.min(quantity, cfg.QuantityMax) })
 	end
 	return offers
 end

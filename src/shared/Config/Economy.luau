@@ -43,6 +43,18 @@ Economy.BlackMarket = {
 	PriceMin = 1.1, -- x the part's normal value (value x rarity multiplier)
 	PriceMax = 1.7,
 	MaxBuyPerRequest = 2,
+	-- supply and demand (Logic/Market): units of each offer per night, shared by the server...
+	QuantityMin = 4,
+	QuantityMax = 10,
+	-- ...and each unit bought pushes the price up, until the next night
+	DemandStep = 0.08, -- +8% per unit already bought tonight
+	MaxRise = 0.6, -- at most +60%
+}
+
+-- What the street pays at night (Logic/Market.SaleMultiplier)
+Economy.StreetDemand = {
+	NightContrabandMultiplier = 1.5, -- contraband weapons sold at night
+	HotSetBonus = 0.25, -- weapons with a part of tonight's wanted set
 }
 
 -- Gas station: eat something, back to full health and stamina
@@ -194,7 +206,6 @@ Economy.DayNight = {
 	DayClockEnd = 17,
 	NightClockStart = 19.5,
 	NightClockEnd = 4.5,
-	NightContrabandPriceMultiplier = 1.5,
 }
 
 -- Building ----------------------------------------------------------------

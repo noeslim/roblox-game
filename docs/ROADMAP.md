@@ -45,9 +45,9 @@ Légende coût : 🟢 petit · 🟡 moyen · 🔴 gros (mérite Opus)
 - R.3 🟡 Crew : salaire, loyauté, niveaux, équipement avec tes armes, Seller qui vend à ta place.
 
 ## Phase 2 — La vibe criminelle
-- 2.1 🟡 Cycle jour/nuit (`Logic/DayNight`) + éclairage, pluie, néons.
+- ✅ 2.1 🟡 Cycle jour/nuit (`Logic/DayNight`) + éclairage, pluie, néons.
 - ✅ 2.2 🔴 Chaleur et descentes (à valider dans Studio) : jauge sauvegardée, `RaidService`, compte à rebours, compartiments secrets (catégorie Secret), inspecteurs qui fouillent, saisie + amende, rapport.
-- 2.3 🟡 Marché noir de nuit avec prix dynamiques (`Logic/Market`).
+- ✅ 2.3 🟡 Marché noir de nuit avec prix dynamiques (`Logic/Market`, à valider dans Studio) : stock limité par nuit, prix qui montent à chaque achat, contrebande ×1,5 la nuit, set recherché chaque nuit (+25 %).
 - 2.4 🟢 Musique et ambiance sonore par zone.
 
 ## Phase 3 — La guerre

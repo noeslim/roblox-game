@@ -9,6 +9,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Cinematics = require(Shared.Config.Cinematics)
 local Economy = require(Shared.Config.Economy)
+local Messages = require(Shared.Config.Messages)
 local Parts = require(Shared.Config.Parts)
 local Visual = require(Shared.Config.Visual)
 local Net = require(Shared.Net)
@@ -124,13 +125,7 @@ local function playSale(info: any)
 	if Visual.Realistic then
 		Effects.Sound(Effects.Sounds.Cash, pos)
 		if info.ownerUserId == localPlayer.UserId then
-			local extra = {}
-			if type(info.combo) == "number" and info.combo > 1 then
-				table.insert(extra, ("streak x%.1f"):format(info.multiplier))
-			end
-			if type(info.tip) == "number" and info.tip > 0 then
-				table.insert(extra, "tip " .. UI.Money(info.tip))
-			end
+			local extra = Messages.SaleExtras(info)
 			local suffix = if #extra > 0 then "  (" .. table.concat(extra, ", ") .. ")" else ""
 			Notify.Show("Sold for " .. UI.Money(info.total) .. suffix, "success")
 		end
