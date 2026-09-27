@@ -2,7 +2,9 @@ local ProfileSchema = require("../../src/shared/Logic/ProfileSchema")
 local Economy = require("../../src/shared/Config/Economy")
 local Parts = require("../../src/shared/Config/Parts")
 
-local cfg = ProfileSchema.ConfigFrom(Economy, Parts)
+local Vehicles = require("../../src/shared/Config/Vehicles")
+
+local cfg = ProfileSchema.ConfigFrom(Economy, Parts, Vehicles.ById)
 
 return function(t)
 	t.test("template is a valid, current profile", function()
@@ -265,5 +267,16 @@ return function(t)
 		t.eq(d.Heat.Value, Economy.Heat.Max)
 		t.eq(d.Heat.LastRaidAt, 0)
 		t.truthy(d.Heat.PendingRaid)
+	end)
+	t.test("v5 profile gets an empty garage; unknown or doubled cars are dropped", function()
+		local d = ProfileSchema.Template(cfg)
+		d.Version = 5
+		d.Vehicles = nil
+		t.truthy(ProfileSchema.Prepare(d, cfg))
+		t.eq(#d.Vehicles, 0)
+		d.Vehicles = { "beater", "beater", "tank", 3 }
+		ProfileSchema.Sanitize(d, cfg)
+		t.eq(#d.Vehicles, 1)
+		t.eq(d.Vehicles[1], "beater")
 	end)
 end

@@ -9,7 +9,7 @@
 
 local ProfileSchema = {}
 
-ProfileSchema.VERSION = 5
+ProfileSchema.VERSION = 6
 
 export type WeaponData = {
 	id: string,
@@ -49,6 +49,7 @@ export type ProfileData = {
 	Contracts: ContractsData,
 	Heat: HeatData,
 	HiddenParts: { [string]: number }, -- part id -> units in secret compartments (<= Parts[id])
+	Vehicles: { string }, -- ids of the cars owned (Config/Vehicles)
 }
 
 export type SchemaConfig = {
@@ -65,10 +66,11 @@ export type SchemaConfig = {
 	contractIds: { [string]: number }, -- contract id -> target (Config/Economy.Contracts)
 	contractsPerDay: number,
 	maxHeat: number,
+	vehicles: { [string]: any }?, -- the car catalogue (Config/Vehicles.ById); nil keeps every id
 }
 
 -- Builds the SchemaConfig from Config/Economy and Config/Parts.
-function ProfileSchema.ConfigFrom(economy: any, parts: { [string]: any }): SchemaConfig
+function ProfileSchema.ConfigFrom(economy: any, parts: { [string]: any }, vehicles: { [string]: any }?): SchemaConfig
 	local p = economy.Profile
 	local contractIds = {}
 	for _, def in economy.Contracts.Pool do
@@ -88,6 +90,7 @@ function ProfileSchema.ConfigFrom(economy: any, parts: { [string]: any }): Schem
 		contractIds = contractIds,
 		contractsPerDay = economy.Contracts.PerDay,
 		maxHeat = economy.Heat.Max,
+		vehicles = vehicles,
 	}
 end
 
@@ -121,6 +124,9 @@ ProfileSchema.Migrations = {
 	[4] = function(data: any, cfg: SchemaConfig)
 		-- v5 added the heat gauge and hidden stock: filled with defaults by Sanitize
 	end,
+	[5] = function(data: any, cfg: SchemaConfig)
+		-- v6 added owned cars: filled with defaults by Sanitize
+	end,
 } :: { [number]: Migration }
 
 local function isFiniteNumber(v: any): boolean
@@ -148,6 +154,7 @@ function ProfileSchema.Template(cfg: SchemaConfig): ProfileData
 		Contracts = { Day = 0, List = {} },
 		Heat = { Value = 0, LastRaidAt = 0, PendingRaid = false },
 		HiddenParts = {},
+		Vehicles = {},
 	}
 end
 
@@ -297,6 +304,16 @@ function ProfileSchema.Sanitize(data: any, cfg: SchemaConfig): ProfileData
 		end
 	end
 	data.HiddenParts = hiddenParts
+
+	local vehicles: { string } = {}
+	if type(data.Vehicles) == "table" then
+		for _, id in ipairs(data.Vehicles) do
+			if type(id) == "string" and not table.find(vehicles, id) and (cfg.vehicles == nil or cfg.vehicles[id] ~= nil) then
+				table.insert(vehicles, id)
+			end
+		end
+	end
+	data.Vehicles = vehicles
 
 	return data :: ProfileData
 end

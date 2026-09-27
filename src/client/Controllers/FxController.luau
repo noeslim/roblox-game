@@ -172,7 +172,7 @@ local function playLevelUp(level: any)
 end
 
 -- Other players' prompts: make them unreachable locally (the server never changes this property).
-local OWNED_PROMPTS = { WorkbenchPrompt = true, DealPrompt = true, HidePrompt = true }
+local OWNED_PROMPTS = { WorkbenchPrompt = true, DealPrompt = true, HidePrompt = true, DrivePrompt = true }
 
 local function ownerOf(inst: Instance): number?
 	local node: Instance? = inst

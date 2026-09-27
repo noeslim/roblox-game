@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Economy = require(Shared.Config.Economy)
 local Parts = require(Shared.Config.Parts)
+local Vehicles = require(Shared.Config.Vehicles)
 local DataConfig = require(Shared.Config.Data)
 local Ledger = require(Shared.Logic.Ledger)
 local ProfileSchema = require(Shared.Logic.ProfileSchema)
@@ -17,7 +18,7 @@ local WeaponCrafting = require(Shared.Logic.WeaponCrafting)
 local ServerNet = require(script.Parent.Parent.Lib.ServerNet)
 local ProfileStore = require(script.Parent.Parent.Packages.ProfileStore) :: any
 
-local SCHEMA_CONFIG = ProfileSchema.ConfigFrom(Economy, Parts)
+local SCHEMA_CONFIG = ProfileSchema.ConfigFrom(Economy, Parts, Vehicles.ById)
 
 local KICK_LOAD_FAILED = "Could not load your data. Please come back in a minute."
 local KICK_SESSION_ENDED = "Your session was opened on another server."
@@ -238,6 +239,7 @@ function DataService.Snapshot(player: Player): any
 		Parts = table.clone(data.Parts),
 		Weapons = weapons,
 		Stats = table.clone(data.Stats),
+		Vehicles = table.clone(data.Vehicles),
 	}
 end
 

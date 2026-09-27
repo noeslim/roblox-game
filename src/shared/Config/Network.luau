@@ -17,5 +17,8 @@ return {
 		RequestStartMission = { capacity = 3, refillPerSecond = 0.5 },
 		RequestAbandonMission = { capacity = 3, refillPerSecond = 0.5 },
 		RequestMissions = { capacity = 3, refillPerSecond = 1 },
+		RequestBuyVehicle = { capacity = 3, refillPerSecond = 0.5 },
+		RequestSpawnVehicle = { capacity = 3, refillPerSecond = 0.5 },
+		RequestDespawnVehicle = { capacity = 3, refillPerSecond = 0.5 },
 	} :: { [string]: { capacity: number, refillPerSecond: number } },
 }

@@ -119,6 +119,7 @@ game.Players.TonPseudo:SetAttribute("DebugGrant", 100000)   -- argent (les meubl
 game.Players.TonPseudo:SetAttribute("DebugGiveParts", 10)   -- 10 de chaque pièce d'arme du jeu
 game.Players.TonPseudo:SetAttribute("DebugLevel", 10)       -- niveau du dealer
 game.Players.TonPseudo:SetAttribute("DebugMission", "night_shift") -- lance une mission (id dans Config/Missions)
+game.Players.TonPseudo:SetAttribute("DebugGiveVehicle", "all")      -- toutes les voitures
 ```
 
 ### Mettre la musique et les ambiances

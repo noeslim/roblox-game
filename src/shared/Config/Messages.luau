@@ -4,6 +4,13 @@
 local Messages = {}
 
 Messages.Errors = {
+	UnknownVehicle = "Unknown car.",
+	NotOwned = "You don't own that car.",
+	NoCarsHere = "No cars in the War Zone.",
+	NoRoom = "No room to park here.",
+	AlreadyOwned = "You already own it.",
+	LevelTooLow = "Your level is too low.",
+	NotEnoughMoney = "Not enough cash.",
 	MissionRunning = "Finish or drop your current job first.",
 	MissionCooldown = "That job is not available yet.",
 	UnknownMission = "Unknown job.",
@@ -116,6 +123,22 @@ Messages.CustomerLines = {
 	Angry = { "Too slow. I'm out.", "Waste of my time.", "Forget it." },
 	Declined = { "Your loss.", "Fine. Keep it." },
 	Cops = { "Cops! I'm out.", "Nah, not with sirens around.", "Too hot here. Later." },
+}
+
+Messages.Vehicles = {
+	Button = "CAR",
+	Title = "GARAGE",
+	Note = "Your car comes next to you, or in front of your trap house. Jump to get out.",
+	Spawn = "DRIVE",
+	Park = "PUT AWAY",
+	Buy = "BUY %s",
+	Level = "LV %d",
+	Bought = "You bought the %s.",
+	Gift = "The %s is yours. Open the garage (CAR) to drive it.",
+	Drive = "Drive",
+	Ride = "Ride",
+	Speed = "%d KM/H",
+	Stats = "Top speed %d",
 }
 
 Messages.Missions = {

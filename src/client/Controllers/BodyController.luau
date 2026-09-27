@@ -106,9 +106,12 @@ local function step(dt: number)
 			continue
 		end
 		local vel = rig.root.CFrame:VectorToObjectSpace(rig.root.AssemblyLinearVelocity)
-		local forward = math.max(0, -vel.Z)
+		-- seated (in a car): no running lean
+		local humanoid = model:FindFirstChildOfClass("Humanoid")
+		local seated = humanoid ~= nil and humanoid.SeatPart ~= nil
+		local forward = if seated then 0 else math.max(0, -vel.Z)
 		local targetLean = math.clamp((forward - Mood.Stamina.WalkSpeed) / (Mood.Stamina.SprintSpeed - Mood.Stamina.WalkSpeed), 0, 1) * B.SprintLean
-		local turn = rig.root.AssemblyAngularVelocity.Y
+		local turn = if seated then 0 else rig.root.AssemblyAngularVelocity.Y
 		local targetRoll = math.clamp(turn * forward * 0.05, -1, 1) * B.TurnLean
 		local targetPitch, targetYaw = 0, 0
 		if model == player.Character then

@@ -21,6 +21,9 @@ Net.Functions = {
 	"RequestStartMission", -- (jobId) a street job from the JOBS board
 	"RequestAbandonMission",
 	"RequestMissions", -- asks for a MissionSync
+	"RequestBuyVehicle", -- (vehicleId)
+	"RequestSpawnVehicle", -- (vehicleId) your car next to you or at your trap house
+	"RequestDespawnVehicle",
 }
 
 Net.Events = {
