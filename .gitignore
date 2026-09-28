@@ -13,3 +13,6 @@ assets/previews/*.png
 !assets/previews/combo_*.png
 __pycache__/
 tools/meshgen/city_layout.json
+
+# folder Studio / Blender extract next to an FBX with embedded textures
+assets/*.fbm/
