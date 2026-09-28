@@ -186,7 +186,7 @@ def place(name, matrix, rng):
             continue  # the doorway stays open (MapBuilder puts a door that opens there)
         if key == "interior":
             key = "window_lit" if lit else "kit_interior"
-        ob = bpy.data.objects.new(t.name, t.data)
+        ob = bpy.data.objects.new(t.name, t.data.copy())  # own data: build.py joins and applies transforms
         ob.matrix_world = matrix
         bpy.context.scene.collection.objects.link(ob)
         ob["bm_asset"] = STATE["asset"]
