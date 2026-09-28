@@ -173,7 +173,7 @@ propres textures (brique, pierre, béton, métal peint, bois, rouille, toile, tu
 concerné : c'est ce qui donne la matière aux façades, corniches, escaliers de secours, caisses... Les modèles
 sans texture (vitres, néons, plastique, peinture de voiture) restent en matériau Roblox + couleur.
 Pour passer à cette version : supprime l'ancien `BlackMarketMeshes`, **redémarre Studio**, refais l'import (étapes 1
-à 7, textures cochées), puis reconstruis la ville (section 10 : `Build()` remplace l'ancienne ville toute seule). Output doit afficher la version `2026-09-27b streets`.
+à 7, textures cochées), puis reconstruis la ville (section 10 : `Build()` remplace l'ancienne ville toute seule). Output doit afficher la version `2026-09-28 kit`.
 
 Au lancement (ou quand tu construis la ville, section 10), le jeu lit ces carrés et crée des **MaterialVariant**
 `BM_<nom>` dans **MaterialService**. Output affiche `[MapBuilder] 12 textures ready`. Toutes les routes, trottoirs,

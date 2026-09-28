@@ -1,0 +1,10 @@
+Downtown City MegaKit by Quaternius
+https://quaternius.com/packs/downtowncitymegakit.html
+
+License: CC0 1.0 Universal (public domain dedication)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Credit is not required; given here anyway. The glTF files are in
+assets/incoming/downtown_megakit/ and are assembled into facade variants of the
+mesh library by tools/meshgen/kit.py (bld_shop_k, bld_shop_l, bld_apartment_k,
+bld_apartment_l).

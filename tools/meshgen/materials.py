@@ -70,4 +70,16 @@ MATERIALS = {
     "billboard_face": ("SmoothPlastic", "#E8E2D6", 0.7, 0.0, 0, 0),  # covered by the ad (SurfaceGui)
     "wood_pole": ("Wood", "#4A3A2C", 0.95, 0.0, 0, 0),
     "court_paint": ("SmoothPlastic", "#E8E8E8", 0.6, 0.0, 0, 0),
+    # Quaternius Downtown City MegaKit (tools/meshgen/kit.py): textured from the kit's own maps
+    "kit_brick": ("Brick", "#8A4A3A", 0.85, 0.0, 0, 0),
+    "kit_brick_pale": ("Brick", "#B08878", 0.85, 0.0, 0, 0),
+    "kit_trim": ("Concrete", "#C8C0A8", 0.8, 0.0, 0, 0),
+    "kit_trim_dark": ("Concrete", "#3A3A40", 0.7, 0.0, 0, 0),
+    "kit_trim_green": ("Concrete", "#3C6A52", 0.7, 0.0, 0, 0),
+    "kit_metal": ("Metal", "#5A5E64", 0.5, 0.6, 0, 0),
+    "kit_ornaments": ("Metal", "#6A6A6E", 0.6, 0.4, 0, 0),
+    "kit_slate": ("Slate", "#3A3E44", 0.8, 0.0, 0, 0),
+    "kit_concrete": ("Concrete", "#8A8A8C", 0.9, 0.0, 0, 0),
+    "kit_glass": ("Glass", "#1A1F24", 0.05, 0.0, 0, 0.35),
+    "kit_interior": ("SmoothPlastic", "#16171C", 0.8, 0.0, 0, 0),  # dark room behind a window
 }

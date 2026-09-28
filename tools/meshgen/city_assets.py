@@ -614,6 +614,20 @@ def bld_ruin():
         tube([(x, H, D / 2 - 0.5), (x + rng.uniform(-1, 1), H + rng.uniform(3, 6), D / 2 - 0.5 + rng.uniform(-1, 1))], 0.08, "metal_rust", verts=6)
 
 
+# Kit buildings: Quaternius Downtown City MegaKit modules around our shops and apartments ---------------
+
+import kit  # noqa: E402
+
+if kit.available():
+    for _style in ("k", "l"):
+        for _arch, _kind, _floors in (("shop", "shop", 2), ("apartment", "home", 4)):
+            def _make(a=_arch, k=_kind, f=_floors, st=_style):
+                kit.building(a, ARCH[a], st, k, f)
+
+            _make.__name__ = f"bld_{_arch}_{_style}"
+            city_asset(_make)
+
+
 # Street furniture -------------------------------------------------------------------------------------
 
 @city_asset

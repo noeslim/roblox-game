@@ -20,6 +20,7 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, HERE)
 
 import lib  # noqa: E402
+import kit  # noqa: E402
 import skins  # noqa: E402
 import uv  # noqa: E402
 from assets import BUILDABLES, WEAPON_PARTS  # noqa: E402
@@ -72,6 +73,9 @@ def make_materials():
         if key in skins.SKINS:
             mats[key] = skin_material(key)
             continue
+        if key in kit.TEXTURES and kit.available():
+            mats[key] = kit.material(key, metal)
+            continue
         m = bpy.data.materials.new(key)
         m.use_nodes = True
         bsdf = m.node_tree.nodes["Principled BSDF"]
@@ -105,6 +109,8 @@ def make_library():
     """Builds every model in the current (empty) scene. Returns (layout, groups, stats, materials)."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     skins.build_all()
+    if kit.available():
+        kit.prepare_textures()
     mats = make_materials()
 
     layout = {}
@@ -156,7 +162,8 @@ def make_library():
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
         # UVs in studs: textured keys tile their skin, the others get a sensible density for
         # Roblox's own materials
-        uv.box_project(ob, skins.SKINS[mat][1] if mat in skins.SKINS else 8)
+        if mat not in kit.TEXTURES:  # the kit's meshes keep their own UVs (trim sheets)
+            uv.box_project(ob, skins.SKINS[mat][1] if mat in skins.SKINS else 8)
         # pivot = bounding box center, like a Roblox MeshPart's CFrame
         bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
         bpy.ops.object.shade_smooth_by_angle(angle=math.radians(35))
@@ -294,7 +301,7 @@ def write_luau(layout, groups):
         "MeshLibrary.Materials = {",
     ]
     for key, (rbx_mat, color, _r, _m, _e, transparency) in MATERIALS.items():
-        textured = "true" if key in skins.SKINS else "false"
+        textured = "true" if key in skins.SKINS or key in kit.TEXTURES else "false"
         lines.append(f"\t{key} = {{ material = {lua_str(rbx_mat)}, color = {lua_str(color)}, transparency = {transparency}, textured = {textured} }},")
     lines += [
         "} :: { [string]: { material: string, color: string, transparency: number, textured: boolean } }",
