@@ -34,7 +34,11 @@ local CONTAINER_COLORS = { "#8A3A2A", "#2A4A7A", "#2E5A3A", "#B06A2A", "#5A5A5E"
 local AWNING_COLORS = { "#7A1E2A", "#1E4A2A", "#1E2E5A", "#5A3A1E", "#2A2A2E" }
 local SIGN_COLORS = { "#FF3FA4", "#3FA9F5", "#39FF88", "#FFB020", "#B45CFF", "#FF3B3B" }
 local SPECIAL_SIGN_COLORS = { POLICE = "#3FA9F5", BANK = "#39FF88", SUPPLIER = "#FFB020", BAR = "#FF3FA4" }
-local COLLIDING_PROPS = { utility_pole = true, traffic_light = true, billboard = true, lamp = true, car = true, container = true, barrier = true, bench = true, trashcan = true, hydrant = true, mailbox = true, smokestack = true }
+local COLLIDING_PROPS = {
+	utility_pole = true, traffic_light = true, billboard = true, lamp = true, car = true, container = true, barrier = true,
+	bench = true, trashcan = true, hydrant = true, mailbox = true, smokestack = true,
+	dumpster = true, newspaper = true, phone_booth = true, bus_stop = true, parking_meter = true, planter = true,
+}
 
 local function hex(s: string): Color3
 	return Color3.fromHex(s)
@@ -482,7 +486,9 @@ local function buildHouse(h: CityLayout.House, hideouts: Instance, origin: CFram
 		light.Shadows = l.shadows
 		light.Parent = holder
 	end
-	tagMeshes(ModelFactory.PlaceLibraryModel("house_shack", house, cf, false), rng, true)
+	local houses = ModelFactory.LibraryVariants("house_shack")
+	local look = if #houses > 0 then houses[(h.index - 1) % #houses + 1] else "house_shack"
+	tagMeshes(ModelFactory.PlaceLibraryModel(look, house, cf, false), rng, true)
 
 	anchor.Parent = plot
 	house.Parent = plot
@@ -547,7 +553,10 @@ local function buildProp(p: CityLayout.Prop, parent: Instance, origin: CFrame, s
 		model.Parent = parent
 		return model
 	end
-	local meshes = ModelFactory.PlaceLibraryModel("prop_" .. p.kind, model, cf, COLLIDING_PROPS[p.kind] == true)
+	-- one of the prop's variants (parked cars: sedan, van, pickup, hatchback), fixed per spot
+	local variants = ModelFactory.LibraryVariants("prop_" .. p.kind)
+	local asset = if #variants > 0 then variants[math.floor(math.abs(p.x * 3 + p.z * 7)) % #variants + 1] else "prop_" .. p.kind
+	local meshes = ModelFactory.PlaceLibraryModel(asset, model, cf, COLLIDING_PROPS[p.kind] == true)
 	if #meshes == 0 then
 		for _, spec in CityParts.PropFallback(p.kind) do
 			local part = makePart(spec, model, cf)
@@ -740,7 +749,7 @@ end
 -- Build ---------------------------------------------------------------------------------------------------
 
 -- Printed at every build: tells whether Studio runs the latest code (Rojo connected).
-MapBuilder.VERSION = "2026-09-27 textured facades"
+MapBuilder.VERSION = "2026-09-27b streets"
 
 function MapBuilder.Build(): (Instance, Instance)
 	local started = os.clock()

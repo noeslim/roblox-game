@@ -227,6 +227,16 @@ def street_shots(cam):
         eye = world(a["w"] * 0.9, 6, a["d"] / 2 + 26)
         target = world(-a["w"] * 0.1, a["h"] * 0.35, a["d"] / 2)
         shot(cam, name, eye, target, lens=22)
+    # the trap houses of one street, and a bus stop with the furniture around it
+    h = LAYOUT["houses"][4]
+    shot(cam, "street_trap_houses", (h["x"] + 45, side + 7, h["z"] + 70), (h["x"] - 20, side + 12, h["z"] + 5), lens=24)
+    for p in LAYOUT["props"]:
+        if p["kind"] == "bus_stop":
+            r = math.radians(p["rot"])
+            fx, fz = math.sin(r), math.cos(r)  # the prop's +Z (towards the road)
+            eye = (p["x"] + fx * 16 - fz * 14, side + 6, p["z"] + fz * 16 + fx * 14)
+            shot(cam, "street_furniture", eye, (p["x"], side + 3, p["z"]), lens=26)
+            break
 
 
 def build_city(offsets):
@@ -256,11 +266,12 @@ def build_city(offsets):
         base = roblox_matrix(h["x"], side - B, h["z"])
         for p in spec["parts"]:
             make_part(p, base, col)
-        place_asset("house_shack", base, offsets, col)
+        houses = sorted(k for k in LIBRARY if k == "house_shack" or k.startswith("house_shack_"))
+        place_asset(houses[(h["index"] - 1) % len(houses)], base, offsets, col)
     for p in LAYOUT["props"]:
         ground = 0 if p["kind"] == "car" else side
         base = roblox_matrix(p["x"], ground + p.get("y", 0), p["z"], p["rot"])
-        place_asset("prop_" + p["kind"], base, offsets, col)
+        place_asset(variant("prop_" + p["kind"], p), base, offsets, col)
         if p["kind"] == "billboard":  # the ad is a SurfaceGui in the game: a flat color here
             ad = CFG["BillboardAds"][p.get("ad", 1) - 1]
             make_part({"name": "AdFace", "shape": "Block", "size": {"x": 28, "y": 12, "z": 0.1}, "pos": {"x": 0, "y": 14, "z": 0.45}, "material": "Neon", "color": ad["background"]}, base, col)

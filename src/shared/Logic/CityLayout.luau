@@ -637,6 +637,15 @@ function CityLayout.Build(cfg: any): Layout
 		end
 		return false
 	end
+	-- district of a point (grid math, like Logic/Soundscape.DistrictAt), "Streets" on the avenues
+	local function districtAt(x: number, z: number): string
+		local lx, lz = x - ox + half - A, z - oz + half - A
+		local col, row = math.floor(lx / (C + A)) + 1, math.floor(lz / (C + A)) + 1
+		if col < 1 or col > N or row < 1 or row > N or lx - (col - 1) * (C + A) > C or lz - (row - 1) * (C + A) > C then
+			return "Streets"
+		end
+		return cfg.Districts[row][col]
+	end
 	for _, r in layout.roads do
 		local horizontal = r.x1 - r.x0 > r.z1 - r.z0
 		local length = if horizontal then r.x1 - r.x0 else r.z1 - r.z0
@@ -662,10 +671,16 @@ function CityLayout.Build(cfg: any): Layout
 					table.insert(layout.props, { kind = "car", x = carX, z = carZ, rot = carRot + (if rng:next() < 0.5 then 0 else 180) })
 				end
 			end
-			-- small furniture between two lamps
-			if rng:next() < 0.5 then
-				local kinds = { "hydrant", "trashcan", "bench" }
-				local kind = kinds[rng:int(1, 3)]
+			-- street furniture between two lamps, picked by district
+			if rng:next() < P.FurnitureChance then
+				local fx0, fz0 = x, z
+				if horizontal then
+					fx0 = x + P.LampSpacing / 2
+				else
+					fz0 = z + P.LampSpacing / 2
+				end
+				local weights = P.Furniture[districtAt(fx0, fz0)] or P.Furniture.Streets
+				local kind = weightedPick(rng, weights) or "trashcan"
 				local fx, fz = x, z
 				if horizontal then
 					fx = x + P.LampSpacing / 2

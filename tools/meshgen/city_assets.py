@@ -795,6 +795,176 @@ def prop_billboard():
         box((1.1, 0.1, 0.7), (x, y0 + Hb + 0.45, 3.8), "lamp_lens", bev=0, segs=1, rot=(-25, 0, 0))
 
 
+def _blob(pos, radius, mat, squash=(1.0, 0.8, 1.0), seed=0, subdiv=2):
+    """Lumpy sphere (trash bags, shrubs)."""
+    import bpy
+    from lib import PIECES, STATE, rb
+
+    rng = random.Random(seed)
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=subdiv, radius=radius, location=rb(pos))
+    ob = bpy.context.view_layer.objects.active
+    for v in ob.data.vertices:
+        v.co.x *= squash[0] * rng.uniform(0.9, 1.1)
+        v.co.y *= squash[2] * rng.uniform(0.9, 1.1)
+        v.co.z *= squash[1] * rng.uniform(0.9, 1.1)
+    ob["bm_asset"] = STATE["asset"]
+    ob["bm_mat"] = mat
+    PIECES.append(ob)
+    return ob
+
+
+@city_asset
+def prop_trash_bags():
+    rng = random.Random(31)
+    spots = [(-0.8, 0, 0), (0.7, 0, 0.3), (0, 0, -0.8), (-0.2, 0.9, -0.1), (1.3, 0, -0.9)]
+    for i, (x, y, z) in enumerate(spots):
+        r = rng.uniform(0.75, 1.0)
+        _blob((x, y + r * 0.75, z), r, "plastic_black", squash=(1.0, 0.8, 0.95), seed=i)
+        tube([(x, y + r * 1.4, z), (x + 0.1, y + r * 1.75, z + 0.05)], 0.12, "plastic_black", verts=6)  # knot
+    box((0.9, 0.5, 0.6), (1.6, 0.25, 0.9), "wood_crate", bev=0.03, segs=1, rot=(0, 25, 0))  # a crate
+    box((0.3, 0.02, 0.4), (-1.6, 0.01, 0.8), "paper", bev=0, segs=1, rot=(0, 40, 0))
+
+
+@city_asset
+def prop_dumpster():
+    box((7, 4, 4), (0, 2.4, 0), "paint_green", bev=0.15, segs=2)
+    box((7.3, 0.35, 4.3), (0, 4.45, 0), "metal_dark", bev=0.05, segs=1)
+    for x in (-1.8, 1.8):
+        box((3.4, 0.15, 4.2), (x, 4.75, -0.1), "plastic_black", bev=0.05, segs=1, rot=(-6, 0, 0))
+    for x in (-3.3, 3.3):
+        box((0.4, 3.6, 4.4), (x, 2.4, 0), "metal_dark", bev=0.05, segs=1)
+    for x in (-2.6, 2.6):
+        for z in (-1.5, 1.5):
+            cyl(0.35, 0.3, (x, 0.35, z), "rubber", axis="x", bev=0.05, verts=10)
+    box((5, 0.12, 0.1), (0, 3.3, 2.05), "paper", bev=0, segs=1)  # stencil band
+
+
+@city_asset
+def prop_newspaper():
+    for i, mat in enumerate(("paint_red", "metal_dark", "paint_green")):
+        x = -1.6 + i * 1.6
+        for dx in (-0.5, 0.5):
+            box((0.12, 1.4, 0.12), (x + dx, 0.7, 0), "metal_black", bev=0, segs=1)
+        box((1.4, 1.7, 1.2), (x, 2.25, 0), mat, bev=0.08, segs=1)
+        box((1.1, 0.8, 0.05), (x, 2.4, 0.61), "window_glass", bev=0, segs=1)
+        box((1.0, 0.6, 0.04), (x, 2.4, 0.56), "paper", bev=0, segs=1)
+        box((1.3, 0.25, 0.1), (x, 3.2, 0.61), "metal_steel", bev=0, segs=1)
+
+
+@city_asset
+def prop_phone_booth():
+    box((2.8, 0.2, 2.2), (0, 0.1, 0), "concrete", bev=0.03, segs=1)
+    for x in (-1.3, 1.3):
+        box((0.2, 7, 0.2), (x, 3.6, -0.9), "metal_dark", bev=0, segs=1)
+        box((0.1, 4.5, 1.8), (x, 4.2, 0), "window_glass", bev=0, segs=1)
+    box((2.8, 7, 0.15), (0, 3.6, -1.0), "metal_dark", bev=0, segs=1)
+    box((3, 0.5, 2.4), (0, 7.3, -0.1), "metal_dark", bev=0.05, segs=1)
+    box((2.6, 0.45, 0.1), (0, 7.3, 1.12), "neon_blue", bev=0, segs=1)
+    box((1.1, 1.6, 0.6), (0, 4.4, -0.7), "metal_steel", bev=0.08, segs=1)
+    box((0.3, 0.9, 0.35), (-0.3, 4.6, -0.3), "plastic_black", bev=0.05, segs=1)  # handset
+    tube([(-0.3, 4.2, -0.35), (-0.1, 3.4, -0.4), (0.1, 4.0, -0.45)], 0.04, "plastic_black", verts=6)
+
+
+@city_asset
+def prop_bus_stop():
+    W, D, H = 8.0, 3.0, 7.5
+    for x in (-W / 2, W / 2):
+        for z in (-D / 2, D / 2 - 0.2):
+            box((0.25, H, 0.25), (x, H / 2, z), "metal_dark", bev=0, segs=1)
+    box((W + 0.8, 0.35, D + 0.8), (0, H + 0.1, 0.1), "trim_dark", bev=0.05, segs=1, rot=(-4, 0, 0))
+    box((W, 5.5, 0.12), (0, 3.6, -D / 2), "window_glass", bev=0, segs=1)
+    box((0.12, 5.5, D - 0.4), (-W / 2, 3.6, -0.1), "window_glass", bev=0, segs=1)
+    box((0.3, 5.2, D - 0.4), (W / 2 + 0.1, 3.6, -0.1), "metal_dark", bev=0, segs=1)
+    box((0.1, 4.6, D - 0.8), (W / 2 + 0.3, 3.6, -0.1), "billboard_face", bev=0, segs=1)  # ad panel
+    for i in range(3):
+        box((5.5, 0.15, 0.4), (-0.6, 1.8, -0.9 + i * 0.45), "wood_mid", bev=0.03, segs=1)
+    for x in (-3, 1.8):
+        box((0.15, 1.8, 1.2), (x, 0.9, -0.5), "metal_black", bev=0, segs=1)
+    # the bus sign on its pole
+    box((0.2, 9, 0.2), (-W / 2 - 1.5, 4.5, D / 2), "metal_steel", bev=0, segs=1)
+    box((1.8, 1.8, 0.1), (-W / 2 - 1.5, 8.2, D / 2 + 0.1), "paint_red", bev=0.05, segs=1)
+    neon_text("BUS", 0.7, (-W / 2 - 1.5, 8.2, D / 2 + 0.18), "neon_orange", tube_radius=0.05)
+
+
+@city_asset
+def prop_parking_meter():
+    lathe([(0.25, 0), (0.12, 0.2), (0.1, 3.4)], (0, 0, 0), "metal_dark", verts=10)
+    box((0.7, 1.1, 0.5), (0, 3.9, 0), "metal_steel", bev=0.1, segs=2)
+    lathe([(0.36, 0), (0.3, 0.3), (0.0, 0.45)], (0, 4.45, 0), "chrome", verts=12)
+    box((0.45, 0.3, 0.05), (0, 4.0, 0.26), "screen", bev=0, segs=1)
+    box((0.12, 0.25, 0.05), (0.18, 3.6, 0.26), "metal_black", bev=0, segs=1)
+
+
+@city_asset
+def prop_planter():
+    box((4, 1.6, 4), (0, 0.8, 0), "concrete", bev=0.1, segs=1)
+    box((3.4, 0.2, 3.4), (0, 1.55, 0), "soil", bev=0, segs=1)
+    for i, (x, z) in enumerate(((-0.7, -0.6), (0.8, -0.2), (0, 0.8), (-0.3, 0.1))):
+        _blob((x, 2.3 + (i % 2) * 0.4, z), 1.1, "leaf", squash=(1.0, 0.9, 1.0), seed=40 + i)
+
+
+@city_asset
+def prop_bike_rack():
+    for i in range(4):
+        x = -2.25 + i * 1.5
+        tube([(x, 0, -0.9), (x, 2.2, -0.9), (x, 2.4, -0.6), (x, 2.4, 0.6), (x, 2.2, 0.9), (x, 0, 0.9)], 0.08, "metal_steel", verts=8)
+    tube([(-2.6, 0.3, 0), (2.6, 0.3, 0)], 0.06, "metal_steel", verts=6)
+
+
+# Parked cars: variants of "car" (MapBuilder picks one per spot); front = +Z, car_paint is recolored
+
+def _wheels(xs, zs, r=1.25):
+    for x in xs:
+        for z in zs:
+            cyl(r, 0.9, (x, r, z), "rubber", axis="x", bev=0.25, verts=20)
+            cyl(r * 0.56, 0.95, (x, r, z), "chrome", axis="x", bev=0.08, verts=12)
+
+
+def _lights(W, front, back, y):
+    for x in (-W / 2 + 1, W / 2 - 1):
+        box((1.2, 0.5, 0.2), (x, y, front), "headlight", bev=0.05, segs=1)
+        box((1.2, 0.5, 0.2), (x, y + 0.1, back), "neon_red", bev=0.05, segs=1)
+
+
+@city_asset
+def prop_car_b():
+    """Delivery van: tall box body, sliding door line, big windscreen."""
+    side = [(-7.5, 0.9), (7.2, 0.9), (7.4, 2.6), (6.8, 3.4), (5.0, 6.8), (-7.5, 7.0)]
+    extrude(side, 6.6, (0, 0, 0), "car_paint", bev=0.2, segs=2, rot=(0, -90, 0))
+    extrude([(6.6, 3.7), (5.0, 6.5), (3.4, 6.5), (3.4, 3.7)], 6.7, (0, 0, 0), "window_glass", bev=0.05, segs=1, rot=(0, -90, 0))
+    for x in (-3.36, 3.36):
+        box((0.05, 0.06, 5), (x, 4.2, -1), "metal_black", bev=0, segs=1)
+    _wheels((-3.2, 3.2), (4.6, -4.8))
+    _lights(6.6, 7.45, -7.55, 2.4)
+    box((6.8, 0.6, 0.5), (0, 1.3, 7.5), "plastic_black", bev=0.15, segs=1)
+    box((6.8, 0.6, 0.5), (0, 1.3, -7.6), "plastic_black", bev=0.15, segs=1)
+
+
+@city_asset
+def prop_car_c():
+    """Pickup truck: cab and open bed."""
+    side = [(-7.6, 1.1), (7.4, 1.1), (7.5, 3.0), (5.0, 3.4), (3.4, 5.4), (-0.6, 5.5), (-0.8, 3.4), (-7.6, 3.4)]
+    extrude(side, 6.6, (0, 0.2, 0), "car_paint", bev=0.2, segs=2, rot=(0, -90, 0))
+    extrude([(3.1, 3.6), (1.9 + 1.0, 5.2), (-0.4, 5.25), (-0.5, 3.6)], 6.7, (0, 0.2, 0), "window_glass", bev=0.05, segs=1, rot=(0, -90, 0))
+    box((6.0, 0.2, 6.4), (0, 3.2, -4.2), "metal_black", bev=0, segs=1)  # bed floor
+    box((6.6, 0.5, 0.2), (0, 4.0, -7.6), "chrome", bev=0.05, segs=1)
+    _wheels((-3.2, 3.2), (4.8, -4.8), r=1.4)
+    _lights(6.6, 7.55, -7.7, 2.8)
+    box((6.8, 0.7, 0.5), (0, 1.6, 7.6), "chrome", bev=0.15, segs=1)
+
+
+@city_asset
+def prop_car_d():
+    """Compact hatchback."""
+    side = [(-5.8, 0.9), (5.6, 0.9), (5.8, 2.3), (5.0, 2.9), (2.4, 3.1), (0.8, 4.9), (-4.4, 5.0), (-5.8, 3.4)]
+    extrude(side, 5.8, (0, 0, 0), "car_paint", bev=0.25, segs=3, rot=(0, -90, 0))
+    extrude([(0.6, 3.15), (-4.2, 3.2), (-4.3, 4.8), (0.7, 4.75), (0.95, 4.5)], 5.9, (0, 0, 0), "window_glass", bev=0.05, segs=1, rot=(0, -90, 0))
+    _wheels((-2.85, 2.85), (3.6, -3.8), r=1.15)
+    _lights(5.8, 5.9, -5.9, 2.2)
+    box((6.0, 0.55, 0.45), (0, 1.25, 5.8), "plastic_black", bev=0.15, segs=1)
+    box((6.0, 0.55, 0.45), (0, 1.25, -5.9), "plastic_black", bev=0.15, segs=1)
+
+
 # Specials ------------------------------------------------------------------------------------------------
 
 @city_asset
@@ -891,3 +1061,67 @@ def house_shack():
         y = rise - (i + 0.5) * rise / steps
         box((7.6, 0.3, run / steps + 0.1), (28, y + 0.35, z), "wood_mid", bev=0.03, segs=1)
     tube([(24.6, B + 3, 22), (24.6, 3, 0)], 0.1, "metal_black", verts=6)
+
+
+# Trap house variants: same walls (Logic/CityParts), different life around them --------------------------
+
+def _house_front_windows():
+    """(u along the front face, y) of the three front windows, plot-local x = u + 4."""
+    G = HOUSE["BasementDepth"]
+    return [(x - 4, G + 6) for x in (-16, -4, 8)]
+
+
+def _bars(face, u, y, w, h, W, D):
+    for i in range(int(w // 0.55) + 1):
+        _fbox(face, u - w / 2 + i * w / int(w // 0.55), y, 0.1, h + 0.4, 0.1, 0.5, W, D, "metal_black")
+    for dy in (-h / 2, 0, h / 2):
+        _fbox(face, u, y + dy, w + 0.3, 0.12, 0.12, 0.5, W, D, "metal_black")
+
+
+@city_asset
+def house_shack_b():
+    """Rougher: boarded window, bars, satellite dish, old couch on the porch, bags by the side."""
+    house_shack()
+    G = HOUSE["BasementDepth"]
+    top = G + HOUSE["GroundFloorHeight"]
+    OX[0] = 4.0
+    (u0, y0), (u1, y1), _ = _house_front_windows()
+    rng = random.Random(61)
+    for k in range(5):  # boards nailed over the first window
+        _fbox("front", u0 + rng.uniform(-0.3, 0.3), y0 - 2 + k * 1.0, 5.4, 0.7, 0.12, 0.55, 58, 50, "wood_worn")
+    _bars("front", u1, y1, 4.5, 5, 58, 50)
+    OX[0] = 0.0
+    # satellite dish on the side wall, cable down
+    box((0.3, 2, 0.3), (33.4, top - 1, 18), "metal_steel", bev=0, segs=1)
+    lathe([(0.05, 0), (0.9, 0.35), (1.3, 0.6)], (34.2, top - 0.3, 18), "plastic_grey", verts=16, rot=(0, 0, -70))
+    tube([(33.3, top - 1.5, 18), (33.3, G + 2, 18)], 0.04, "plastic_black", verts=6)
+    # couch on the porch, bags and a tire by the side
+    box((6, 1.4, 2.4), (20, G + 0.9, 29), "fabric_dark", bev=0.3, segs=2)
+    box((6, 2.2, 0.8), (20, G + 1.9, 28.1), "fabric_dark", bev=0.3, segs=2)
+    for x in (16.8, 23.2):
+        box((0.8, 1.8, 2.4), (x, G + 1.4, 29), "fabric_dark", bev=0.3, segs=2)
+    for i, (x, z) in enumerate(((-27.5, 18), (-28.5, 16.5), (-27.8, 15))):
+        _blob((x, G + 0.8, z), 0.9, "plastic_black", seed=70 + i)
+    cyl(1.4, 0.9, (-28, G + 0.45, 11), "rubber", axis="y", bev=0.3, verts=16)
+
+
+@city_asset
+def house_shack_c():
+    """Guarded: bars on every front window, camera and floodlight over the door, sign on the porch."""
+    house_shack()
+    G = HOUSE["BasementDepth"]
+    OX[0] = 4.0
+    for u, y in _house_front_windows():
+        _bars("front", u, y, 4.5, 5, 58, 50)
+    OX[0] = 0.0
+    # camera + floodlight above the door
+    box((0.6, 0.6, 1.2), (31.5, G + 9.2, 26), "plastic_grey", bev=0.1, segs=1, rot=(-20, -25, 0))
+    cyl(0.22, 0.2, (31.3, G + 9.0, 26.7), "glass_dark", axis="z", bev=0, verts=10)
+    box((1.4, 0.6, 0.8), (24.5, G + 9.2, 25.8), "metal_dark", bev=0.05, segs=1)
+    box((1.2, 0.1, 0.6), (24.5, G + 8.88, 25.9), "lamp_lens", bev=0, segs=1)
+    # sign hanging on the porch railing
+    box((3, 1.8, 0.1), (19, G + 2.6, 32.65), "paper", bev=0, segs=1)
+    box((2.6, 0.3, 0.02), (19, G + 3.0, 32.71), "paint_red", bev=0, segs=1)
+    box((2.2, 0.2, 0.02), (19, G + 2.4, 32.71), "metal_black", bev=0, segs=1)
+    # oil drum by the side
+    cyl(1, 3, (-27.5, G + 1.5, 14), "metal_rust", bev=0.1, verts=16)
