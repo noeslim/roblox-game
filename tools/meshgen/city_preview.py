@@ -328,6 +328,10 @@ def setup_render():
 
 
 def shot(cam, name, eye, target, lens=35):
+    # --only=street_blocks,street_shops renders just those shots
+    only = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--only=")), None)
+    if only and name not in only:
+        return
     cam.data.lens = lens
     cam.location = rb(eye)
     cam.rotation_euler = (rb(target) - rb(eye)).to_track_quat("-Z", "Y").to_euler()

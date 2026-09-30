@@ -687,14 +687,14 @@ MeshLibrary.Parts = {
 -- MapBuilder turns each into a MaterialVariant "BM_<name>"
 MeshLibrary.Textures = {
 	asphalt = { baseMaterial = "Asphalt", studsPerTile = 14 },
-	sidewalk = { baseMaterial = "Pavement", studsPerTile = 8 },
-	brick_red = { baseMaterial = "Brick", studsPerTile = 8 },
-	brick_dark = { baseMaterial = "Brick", studsPerTile = 8 },
+	sidewalk = { baseMaterial = "Pavement", studsPerTile = 10 },
+	brick_red = { baseMaterial = "Brick", studsPerTile = 6 },
+	brick_dark = { baseMaterial = "Brick", studsPerTile = 7 },
 	concrete = { baseMaterial = "Concrete", studsPerTile = 12 },
 	plaster = { baseMaterial = "Plaster", studsPerTile = 8 },
 	siding = { baseMaterial = "WoodPlanks", studsPerTile = 8 },
 	shingles = { baseMaterial = "RoofShingles", studsPerTile = 8 },
-	metal_corrugated = { baseMaterial = "CorrodedMetal", studsPerTile = 10 },
+	metal_corrugated = { baseMaterial = "CorrodedMetal", studsPerTile = 8 },
 	cobblestone = { baseMaterial = "Cobblestone", studsPerTile = 8 },
 	dirt = { baseMaterial = "Ground", studsPerTile = 14 },
 	planks = { baseMaterial = "WoodPlanks", studsPerTile = 8 },
