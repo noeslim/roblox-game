@@ -20,7 +20,7 @@ OUT = os.path.join(PATTERNS, "skins")
 
 # material key: (pattern, studs per tile, tint or None to keep the pattern's own colors)
 SKINS = {
-    "brick_red": ("brick_red", 8, None),
+    "brick_red": ("brick_red", 6, None),
     "concrete": ("concrete", 12, "#8A8A8C"),
     "trim_light": ("stone", 10, "#C8C0B0"),
     "trim_dark": ("painted_metal", 6, "#34343A"),

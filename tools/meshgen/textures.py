@@ -380,6 +380,65 @@ def bark(rng):
     return np.clip(color, 0, 1), plates, 0.95, 3.0
 
 
+# Photo scans ------------------------------------------------------------------------------------------
+# CC0 scans pushed by the authors (tools/download_assets.ps1, docs/ASSETS.md) replace the procedural
+# pattern of the same name when their folder is there: name -> (folder under assets/incoming, studs per
+# tile at the scan's real size). The skins (skins.py) are recolored from these, like the patterns.
+INCOMING = os.path.join(ROOT, "assets", "incoming")
+SCANS = {
+    "asphalt": ("polyhaven_textures/asphalt_02", 14),
+    "sidewalk": ("polyhaven_textures/concrete_pavement_02", 10),
+    "brick_red": ("polyhaven_textures/brick_wall_02", 6),
+    "brick_dark": ("polyhaven_textures/brick_wall_09", 7),
+    "concrete": ("polyhaven_textures/concrete_wall_007", 12),
+    "plaster": ("polyhaven_textures/worn_plaster_wall", 8),
+    "metal_corrugated": ("polyhaven_textures/rusty_corrugated_iron", 8),
+    "cobblestone": ("polyhaven_textures/cobblestone_05", 8),
+    "planks": ("polyhaven_textures/old_wood_floor", 8),
+    "shingles": ("polyhaven_textures/roof_07", 8),
+    "painted_metal": ("ambientcg/PaintedMetal006", 6),
+    "rust": ("polyhaven_textures/rusty_metal_04", 6),
+}
+# which file of a scan folder is which map (Poly Haven: *_diff_* / *_nor_gl_* / *_rough_*;
+# ambientCG: *_Color / *_NormalGL / *_Roughness)
+SCAN_MAPS = {
+    "color": ("_diff_", "_diffuse_", "_Color."),
+    "normal": ("_nor_gl_", "_NormalGL."),
+    "roughness": ("_rough_", "_Roughness."),
+}
+
+
+def scan_files(name):
+    """{"color", "normal", "roughness"} -> file of the scan for this texture, or None if not all there."""
+    if name not in SCANS:
+        return None
+    folder = os.path.join(INCOMING, SCANS[name][0])
+    if not os.path.isdir(folder):
+        return None
+    found = {}
+    for kind, marks in SCAN_MAPS.items():
+        for f in sorted(os.listdir(folder)):
+            if any(m in f for m in marks) and f.lower().endswith((".jpg", ".jpeg", ".png")):
+                found[kind] = os.path.join(folder, f)
+                break
+    return found if len(found) == len(SCAN_MAPS) else None
+
+
+def save_scan(name, files):
+    os.makedirs(OUT, exist_ok=True)
+    for kind, path in files.items():
+        mode = "L" if kind == "roughness" else "RGB"
+        img = Image.open(path).convert(mode).resize((N, N), Image.LANCZOS)
+        img.save(os.path.join(OUT, f"{name}_{kind}.png"), optimize=True)
+
+
+# a scanned texture tiles at the scan's real size
+for _name, (_folder, _studs) in SCANS.items():
+    if _name in TEXTURES and scan_files(_name):
+        _fn, _base, _ = TEXTURES[_name]
+        TEXTURES[_name] = (_fn, _base, _studs)
+
+
 # Output ------------------------------------------------------------------------------------------------
 
 def save(name, color, height, rough, strength):
@@ -393,6 +452,11 @@ def save(name, color, height, rough, strength):
 
 def build_all():
     for i, (name, (fn, _base, _studs)) in enumerate(TEXTURES.items()):
+        files = scan_files(name)
+        if files:
+            save_scan(name, files)
+            print(f"[textures] {name} (scan {SCANS[name][0]})")
+            continue
         rng = np.random.default_rng(1000 + i)
         color, height, rough, strength = fn(rng)
         save(name, color, height, rough, strength)
