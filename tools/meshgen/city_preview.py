@@ -211,7 +211,7 @@ def variant(base, b):
 def street_shots(cam):
     """Close-ups at eye height on a street of each kind of building."""
     side = CFG["Grid"]["SidewalkHeight"]
-    wanted = {"apartment": "street_blocks", "shop": "street_shops", "chinatown": "street_chinatown", "office": "street_downtown"}
+    wanted = {"apartment": "street_blocks", "shop": "street_shops", "chinatown": "street_chinatown", "office": "street_downtown", "warehouse": "street_industrial"}
     done = set()
     for b in LAYOUT["buildings"]:
         name = wanted.get(b["archetype"])
@@ -236,6 +236,14 @@ def street_shots(cam):
             fx, fz = math.sin(r), math.cos(r)  # the prop's +Z (towards the road)
             eye = (p["x"] + fx * 16 - fz * 14, side + 6, p["z"] + fz * 16 + fx * 14)
             shot(cam, "street_furniture", eye, (p["x"], side + 3, p["z"]), lens=26)
+            break
+    # a pile of drums / crates on a sidewalk, close
+    for p in LAYOUT["props"]:
+        if p["kind"] in ("barrels", "crates"):
+            r = math.radians(p["rot"])
+            fx, fz = math.sin(r), math.cos(r)
+            eye = (p["x"] + fx * 9 - fz * 6, side + 4.5, p["z"] + fz * 9 + fx * 6)
+            shot(cam, "street_props", eye, (p["x"], side + 1.5, p["z"]), lens=28)
             break
 
 
