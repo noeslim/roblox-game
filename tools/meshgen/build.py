@@ -21,6 +21,7 @@ sys.path.insert(0, HERE)
 
 import lib  # noqa: E402
 import kit  # noqa: E402
+import phaven  # noqa: E402
 import skins  # noqa: E402
 import uv  # noqa: E402
 from assets import BUILDABLES, WEAPON_PARTS  # noqa: E402
@@ -76,6 +77,9 @@ def make_materials():
         if key in kit.TEXTURES and kit.available():
             mats[key] = kit.material(key, metal)
             continue
+        if key in phaven.TEXTURED:
+            mats[key] = phaven.material(key)
+            continue
         m = bpy.data.materials.new(key)
         m.use_nodes = True
         bsdf = m.node_tree.nodes["Principled BSDF"]
@@ -111,6 +115,8 @@ def make_library():
     skins.build_all()
     if kit.available():
         kit.prepare_textures()
+    phaven.prepare()
+    MATERIALS.update(phaven.materials_table())
     mats = make_materials()
 
     layout = {}
@@ -162,7 +168,7 @@ def make_library():
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
         # UVs in studs: textured keys tile their skin, the others get a sensible density for
         # Roblox's own materials
-        if mat not in kit.TEXTURES:  # the kit's meshes keep their own UVs (trim sheets)
+        if mat not in kit.TEXTURES and mat not in phaven.TEXTURED:  # kit / Poly Haven meshes keep their UVs
             uv.box_project(ob, skins.SKINS[mat][1] if mat in skins.SKINS else 8)
         # pivot = bounding box center, like a Roblox MeshPart's CFrame
         bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
@@ -301,7 +307,7 @@ def write_luau(layout, groups):
         "MeshLibrary.Materials = {",
     ]
     for key, (rbx_mat, color, _r, _m, _e, transparency) in MATERIALS.items():
-        textured = "true" if key in skins.SKINS or key in kit.TEXTURES else "false"
+        textured = "true" if key in skins.SKINS or key in kit.TEXTURES or key in phaven.TEXTURED else "false"
         lines.append(f"\t{key} = {{ material = {lua_str(rbx_mat)}, color = {lua_str(color)}, transparency = {transparency}, textured = {textured} }},")
     lines += [
         "} :: { [string]: { material: string, color: string, transparency: number, textured: boolean } }",

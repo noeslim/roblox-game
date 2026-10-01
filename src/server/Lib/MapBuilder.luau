@@ -38,6 +38,7 @@ local COLLIDING_PROPS = {
 	utility_pole = true, traffic_light = true, billboard = true, lamp = true, car = true, container = true, barrier = true,
 	bench = true, trashcan = true, hydrant = true, mailbox = true, smokestack = true,
 	dumpster = true, newspaper = true, phone_booth = true, bus_stop = true, parking_meter = true, planter = true,
+	utility_box = true, barrels = true, crates = true,
 }
 
 local function hex(s: string): Color3
@@ -688,6 +689,10 @@ local function buildAmbience(layout: CityLayout.Layout, parent: Instance, origin
 		local r = avenues[rng:NextInteger(1, #avenues)]
 		local pos = origin * CFrame.new(rng:NextNumber(r.x0 + 4, r.x1 - 4), 0.05, rng:NextNumber(r.z0 + 4, r.z1 - 4))
 		local lid = makePart({ name = "Manhole", shape = "Cylinder", size = { x = 0.1, y = 3, z = 3 }, pos = { x = 0, y = 0, z = 0 }, rotZ = 90, material = "DiamondPlate", color = "#202024", canCollide = false }, parent, pos)
+		-- the scanned cover when the library has it (the part stays, invisible, to carry the steam)
+		if #ModelFactory.PlaceLibraryModel("prop_manhole", parent, pos * CFrame.Angles(0, rng:NextNumber(0, math.pi), 0), false) > 0 then
+			lid.Transparency = 1
+		end
 		local smoke = Instance.new("Smoke")
 		smoke.Color = hex("#C8C8D0")
 		smoke.Opacity = 0.12
@@ -727,7 +732,11 @@ local function buildAmbience(layout: CityLayout.Layout, parent: Instance, origin
 		end
 		if not blocked then
 			local base = origin * CFrame.new(x, sidewalkTop, z)
-			makePart({ name = "FireBarrel", shape = "Cylinder", size = { x = 3, y = 2.2, z = 2.2 }, pos = { x = 0, y = 1.5, z = 0 }, rotZ = 90, material = "CorrodedMetal", color = "#5A3A28" }, parent, base)
+			if #ModelFactory.PlaceLibraryModel("prop_fire_barrel", parent, base, true) == 0 then
+				for _, spec in CityParts.PropFallback("fire_barrel") do
+					makePart(spec, parent, base)
+				end
+			end
 			local top = makePart({ name = "FireTop", shape = "Block", size = { x = 1.6, y = 0.2, z = 1.6 }, pos = { x = 0, y = 3.1, z = 0 }, material = "SmoothPlastic", color = "#1A1410", transparency = 1, canCollide = false }, parent, base)
 			local fire = Instance.new("Fire")
 			fire.Size = 4
@@ -749,7 +758,7 @@ end
 -- Build ---------------------------------------------------------------------------------------------------
 
 -- Printed at every build: tells whether Studio runs the latest code (Rojo connected).
-MapBuilder.VERSION = "2026-09-30 scans"
+MapBuilder.VERSION = "2026-10-01 polyhaven"
 
 function MapBuilder.Build(): (Instance, Instance)
 	local started = os.clock()

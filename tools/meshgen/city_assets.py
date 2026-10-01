@@ -9,6 +9,7 @@ import math
 import os
 import random
 
+import phaven as ph
 from lib import box, cyl, extrude, lathe, neon_text, tube
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -88,8 +89,12 @@ def window_grid(face, W, D, floors, floor_h, per_floor, first_floor, w, h, rng, 
             window(face, u, y, w, h, W, D, lit=rng.random() < lit_chance, frame=frame, style=style)
             if ac_chance and rng.random() < ac_chance:
                 # window air conditioner hanging under the sill
-                _fbox(face, u, y - h / 2 - 1.2, 2.4, 1.4, 1.6, 0.9, W, D, "plastic_grey")
-                _fbox(face, u, y - h / 2 - 1.2, 2.0, 1.0, 0.05, 1.72, W, D, "metal_dark")
+                if ph.has("aircon"):
+                    name = "aircon_rusted" if rng.random() < 0.5 else "aircon"
+                    ph.face(name, face, _face_point(face, u, y - h / 2 - 0.4 - ph.size(name)[1], W, D, 0))
+                else:
+                    _fbox(face, u, y - h / 2 - 1.2, 2.4, 1.4, 1.6, 0.9, W, D, "plastic_grey")
+                    _fbox(face, u, y - h / 2 - 1.2, 2.0, 1.0, 0.05, 1.72, W, D, "metal_dark")
 
 
 def band(W, D, y, mat="trim_light", h=0.5, depth=0.35):
@@ -154,6 +159,9 @@ def drainpipe(x, z, top, bottom=0.3):
 
 
 def ac_unit(x, y, z):
+    if ph.has("aircon_rusted"):
+        ph.place("aircon_rusted", (x, y, z))
+        return
     box((3, 2, 2.4), (x, y + 1, z), "plastic_grey", bev=0.1, segs=1)
     cyl(0.8, 0.1, (x, y + 2.02, z), "metal_black", bev=0, verts=12)
     for i in range(4):
@@ -246,7 +254,13 @@ def storefront(u, w, W, D, h=7.5, shutter=0.0, bars=False):
     for i in range(n + 1):
         _fbox("front", u - w / 2 + i * w / n, 1.2 + (h - 1.2) / 2, 0.35, h - 1.2, 0.35, 0.2, W, D, "trim_dark")
     _fbox("front", u, h + 0.5, w + 1, 1.0, 0.5, 0.25, W, D, "trim_dark")
-    if shutter > 0:
+    if shutter > 0 and ph.has("shutter"):
+        # a real roller shutter (Poly Haven), half of them tagged
+        sh = max((h - 1.2) * shutter, 2.5)
+        name = "shutter_graffiti" if int(abs(u * 7 + w * 3)) % 2 else "shutter"
+        sw, shh, _sd = ph.size(name)
+        ph.face(name, "front", _face_point("front", u, h - sh, W, D, 0), scale=(w / sw, sh / shh, 0.5))
+    elif shutter > 0:
         sh = (h - 1.2) * shutter
         _fbox("front", u, h - sh / 2, w, sh, 0.12, 0.35, W, D, "metal_dark")
         k = int(sh / 0.35)
@@ -515,6 +529,14 @@ def bld_warehouse():
     drainpipe(W / 2 - 1, D / 2 + 0.5, H - 0.5)
     drainpipe(-W / 2 + 1, D / 2 + 0.5, H - 0.5)
     tube([(-W / 2 + 2, 3, -D / 2 - 1), (W / 2 - 2, 3, -D / 2 - 1)], 0.35, "metal_rust", verts=10)  # pipe run
+    if ph.has("floodlight"):
+        # floodlights and a camera over the doors, drums and a utility box by the walls
+        for u in (-14, 14):
+            ph.face("floodlight", "front", _face_point("front", u, 17, W, D, 0.8))
+        ph.face("camera", "front", _face_point("front", W / 2 - 3, 18, W, D, 0.8))
+        ph.face("utility_box_wide", "left", _face_point("left", D / 2 - 6, 0, W, D, 0))
+        for i, name in enumerate(("barrel_red", "barrel_blue", "barrel_plastic")):
+            ph.place(name, _face_point("right", -D / 2 + 5 + i * 2.3, 0, W, D, 1.4), yaw=rng.uniform(0, 360))
     del rng
 
 
@@ -673,12 +695,18 @@ def prop_bench():
 
 @city_asset
 def prop_trashcan():
+    if ph.has("trash_can_rust"):
+        ph.place("trash_can_rust", (0, 0, 0))
+        return
     lathe([(0.9, 0), (1.0, 0.1), (1.05, 3.2), (1.1, 3.3), (0.0, 3.35)], (0, 0, 0), "paint_green", verts=20)
     lathe([(1.12, 3.3), (1.12, 3.5), (0.6, 3.9), (0.0, 3.95)], (0, 0, 0), "metal_dark", verts=20)
 
 
 @city_asset
 def prop_hydrant():
+    if ph.has("hydrant_aged"):
+        ph.place("hydrant_aged", (0, 0, 0))
+        return
     lathe([(0.5, 0), (0.5, 0.2), (0.38, 0.3), (0.38, 1.8), (0.45, 1.9), (0.3, 2.3), (0.0, 2.5)], (0, 0, 0), "paint_red", verts=16)
     for axis, d in (("x", (0.45, 1.3, 0)), ("x", (-0.45, 1.3, 0)), ("z", (0, 1.3, 0.45))):
         cyl(0.16, 0.3, d, "metal_brass", axis=axis, bev=0.03, verts=10)
@@ -711,6 +739,9 @@ def prop_car():
 
 @city_asset
 def prop_barrier():
+    if ph.has("barrier"):
+        ph.fit("barrier", (7.8, 3.2, 2.4), (0, 0, 0), stretch=True)
+        return
     extrude([(-1.2, 0), (1.2, 0), (1.2, 0.5), (0.4, 1.3), (0.35, 2.8), (-0.35, 2.8), (-0.4, 1.3), (-1.2, 0.5)], 7.8, (0, 0, 0), "concrete", bev=0.06, segs=1, rot=(0, 90, 0))
     box((7.8, 0.3, 0.05), (0, 2.2, 0.39), "neon_orange", bev=0, segs=1)
 
@@ -1052,14 +1083,23 @@ def house_shack():
         box((0.15, 2.8, 0.15), (x, G + 2.0, 32.5), "trim_light", bev=0, segs=1)
     for i in range(3):
         box((5.5, 0.35, 1.2), (28, G + 0.2 - i * 0.2, 33.6 + i * 1.1), "wood_mid", bev=0.03, segs=1)
-    box((0.8, 0.8, 0.5), (31.2, G + 7, 25.4), "lamp_lens", bev=0.1, segs=1)
+    if ph.has("wall_lantern"):
+        ph.place("wall_lantern", (32.2, G + 5.2, 25.2 + ph.size("wall_lantern")[2] * 0.3), scale=0.6)
+    else:
+        box((0.8, 0.8, 0.5), (31.2, G + 7, 25.4), "lamp_lens", bev=0.1, segs=1)
+    if ph.has("plastic_chair"):
+        ph.place("plastic_chair", (15.8, G + 0.5, 27.2), yaw=20)
+        ph.place("cardboard_box", (-27.6, G, -6), yaw=10)
     # roof trim, gutters, chimney
     tube([(-27, top + 1.0, 27.2), (35, top + 1.0, 27.2)], 0.25, "trim_dark", verts=8)
     tube([(-27, top + 1.0, -27.2), (35, top + 1.0, -27.2)], 0.25, "trim_dark", verts=8)
     tube([(34.8, top + 1.0, 27.2), (34.8, G, 27.2)], 0.18, "trim_dark", verts=8)
     box((4, 12, 4), (-14, top + 6, -12), "brick_red", bev=0.1, segs=1)
     box((4.6, 0.6, 4.6), (-14, top + 12.2, -12), "concrete", bev=0.05, segs=1)
-    ac_unit(-27, G, 6)
+    if ph.has("aircon_rusted"):
+        ph.face("aircon_rusted", "left", (-25, G + 0.5, 6))
+    else:
+        ac_unit(-27, G, 6)
     # basement: exposed pipes, bare bulbs, water heater (all in the stairwell / on the walls)
     for z in (-18, 0, 18):
         tube([(-23.5, B - 1.2, z), (31.5, B - 1.2, z)], 0.18, "metal_rust", verts=8)
@@ -1110,13 +1150,18 @@ def house_shack_b():
     lathe([(0.05, 0), (0.9, 0.35), (1.3, 0.6)], (34.2, top - 0.3, 18), "plastic_grey", verts=16, rot=(0, 0, -70))
     tube([(33.3, top - 1.5, 18), (33.3, G + 2, 18)], 0.04, "plastic_black", verts=6)
     # couch on the porch, bags and a tire by the side
-    box((6, 1.4, 2.4), (20, G + 0.9, 29), "fabric_dark", bev=0.3, segs=2)
-    box((6, 2.2, 0.8), (20, G + 1.9, 28.1), "fabric_dark", bev=0.3, segs=2)
-    for x in (16.8, 23.2):
-        box((0.8, 1.8, 2.4), (x, G + 1.4, 29), "fabric_dark", bev=0.3, segs=2)
+    if ph.has("sofa_old"):
+        ph.place("sofa_old", (20, G + 0.5, 28.6))
+        ph.place("tyre", (-26.0, G, 11), yaw=-90)
+        ph.place("tyre", (-26.6, G, 9.2), yaw=-80)
+    else:
+        box((6, 1.4, 2.4), (20, G + 0.9, 29), "fabric_dark", bev=0.3, segs=2)
+        box((6, 2.2, 0.8), (20, G + 1.9, 28.1), "fabric_dark", bev=0.3, segs=2)
+        for x in (16.8, 23.2):
+            box((0.8, 1.8, 2.4), (x, G + 1.4, 29), "fabric_dark", bev=0.3, segs=2)
+        cyl(1.4, 0.9, (-28, G + 0.45, 11), "rubber", axis="y", bev=0.3, verts=16)
     for i, (x, z) in enumerate(((-27.5, 18), (-28.5, 16.5), (-27.8, 15))):
         _blob((x, G + 0.8, z), 0.9, "plastic_black", seed=70 + i)
-    cyl(1.4, 0.9, (-28, G + 0.45, 11), "rubber", axis="y", bev=0.3, verts=16)
 
 
 @city_asset
@@ -1129,13 +1174,84 @@ def house_shack_c():
         _bars("front", u, y, 4.5, 5, 58, 50)
     OX[0] = 0.0
     # camera + floodlight above the door
-    box((0.6, 0.6, 1.2), (31.5, G + 9.2, 26), "plastic_grey", bev=0.1, segs=1, rot=(-20, -25, 0))
-    cyl(0.22, 0.2, (31.3, G + 9.0, 26.7), "glass_dark", axis="z", bev=0, verts=10)
-    box((1.4, 0.6, 0.8), (24.5, G + 9.2, 25.8), "metal_dark", bev=0.05, segs=1)
-    box((1.2, 0.1, 0.6), (24.5, G + 8.88, 25.9), "lamp_lens", bev=0, segs=1)
+    if ph.has("camera"):
+        ph.place("camera", (31.5, G + 8.8, 26.0), yaw=-25)
+        ph.place("floodlight", (24.5, G + 8.4, 25.8))
+    else:
+        box((0.6, 0.6, 1.2), (31.5, G + 9.2, 26), "plastic_grey", bev=0.1, segs=1, rot=(-20, -25, 0))
+        cyl(0.22, 0.2, (31.3, G + 9.0, 26.7), "glass_dark", axis="z", bev=0, verts=10)
+        box((1.4, 0.6, 0.8), (24.5, G + 9.2, 25.8), "metal_dark", bev=0.05, segs=1)
+        box((1.2, 0.1, 0.6), (24.5, G + 8.88, 25.9), "lamp_lens", bev=0, segs=1)
     # sign hanging on the porch railing
     box((3, 1.8, 0.1), (19, G + 2.6, 32.65), "paper", bev=0, segs=1)
     box((2.6, 0.3, 0.02), (19, G + 3.0, 32.71), "paint_red", bev=0, segs=1)
     box((2.2, 0.2, 0.02), (19, G + 2.4, 32.71), "metal_black", bev=0, segs=1)
-    # oil drum by the side
-    cyl(1, 3, (-27.5, G + 1.5, 14), "metal_rust", bev=0.1, verts=16)
+    # oil drums by the side
+    if ph.has("barrel_blue"):
+        ph.place("barrel_blue", (-27.2, G, 14), yaw=30)
+        ph.place("barrel_red", (-27.4, G, 11.6), yaw=-50)
+        ph.place("propane", (-27.0, G, 9.6))
+    else:
+        cyl(1, 3, (-27.5, G + 1.5, 14), "metal_rust", bev=0.1, verts=16)
+
+
+# Poly Haven street props (CC0 scans, phaven.py): variants of the kinds above and new kinds ---------------
+# Registered only when the models are in assets/incoming; CityParts.PropFallback covers the game without them.
+
+if ph.available():
+
+    @city_asset
+    def prop_hydrant_b():
+        ph.place("hydrant", (0, 0, 0))
+
+    @city_asset
+    def prop_trashcan_b():
+        ph.place("trash_can", (0, 0, 0))
+
+    @city_asset
+    def prop_car_e():
+        """A parked car under a cover."""
+        ph.place("covered_car", (0, 0, 0))
+
+    @city_asset
+    def prop_utility_box():
+        ph.place("utility_box_wide", (0, 0, 0))
+
+    @city_asset
+    def prop_utility_box_b():
+        ph.place("utility_box", (-1.2, 0, 0))
+        ph.place("utility_box", (1.0, 0, 0.1), yaw=4)
+
+    @city_asset
+    def prop_barrels():
+        ph.place("barrel_red", (-1.3, 0, 0.2), yaw=20)
+        ph.place("barrel_blue", (1.0, 0, -0.3), yaw=140)
+        ph.place("tyre", (0.0, 0, 1.6), yaw=75)
+
+    @city_asset
+    def prop_barrels_b():
+        ph.place("barrel_plastic", (-1.1, 0, 0), yaw=-30)
+        ph.place("barrel_red", (0.9, 0, 0.4), yaw=95)
+        ph.place("rim", (2.4, 0, 1.4), yaw=60)
+
+    @city_asset
+    def prop_crates():
+        ph.place("crate_long", (-0.8, 0, 0), yaw=90)
+        ph.place("crate", (-0.8, 1.53, 0.1), yaw=5)
+        ph.place("cardboard_box", (2.4, 0, 0.5), yaw=15)
+        ph.place("cardboard_box", (2.3, 1.12, 0.4), yaw=-20)
+
+    @city_asset
+    def prop_crates_b():
+        ph.place("crate", (0, 0, 0), yaw=-8)
+        ph.place("cardboard_box", (-2.2, 0, 0.6), yaw=30)
+        ph.place("cardboard_box", (2.0, 0, 0.8), yaw=-12)
+
+    @city_asset
+    def prop_fire_barrel():
+        """The burning barrel of the street ambience (MapBuilder adds the fire on top)."""
+        ph.place("barrel_stove", (0, 0, 0))
+
+    @city_asset
+    def prop_manhole():
+        ph.place("manhole", (0, 0, 0))

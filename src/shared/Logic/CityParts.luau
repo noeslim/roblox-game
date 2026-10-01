@@ -446,6 +446,22 @@ function CityParts.PropFallback(kind: string): { PartSpec }
 			part("Box", v(4, 1.6, 4), v(0, 0.8, 0), "Concrete", "#7A7A7E"),
 			{ name = "Shrub", shape = "Ball", size = v(3.4, 3, 3.4), pos = v(0, 2.6, 0), material = "Grass", color = "#2E6B30", canCollide = false },
 		}
+	elseif kind == "utility_box" then
+		return { part("Box", v(3, 3.7, 1.4), v(0, 1.85, 0), "Metal", "#6A7480") }
+	elseif kind == "barrels" then
+		return {
+			{ name = "Barrel", shape = "Cylinder", size = v(2.9, 1.9, 1.9), pos = v(-1.3, 1.45, 0.2), rotZ = 90, material = "CorrodedMetal", color = "#7A2A22" },
+			{ name = "Barrel", shape = "Cylinder", size = v(3, 2.1, 2.1), pos = v(1, 1.5, -0.3), rotZ = 90, material = "Metal", color = "#2A4A7A" },
+		}
+	elseif kind == "crates" then
+		return {
+			part("Crate", v(3.8, 1.5, 1.8), v(-0.8, 0.75, 0), "WoodPlanks", "#7A5634"),
+			part("Box", v(1.3, 2.2, 1.7), v(2.4, 1.1, 0.5), "Cardboard", "#A07A50"),
+		}
+	elseif kind == "fire_barrel" then
+		return { { name = "FireBarrel", shape = "Cylinder", size = v(3, 2.2, 2.2), pos = v(0, 1.5, 0), rotZ = 90, material = "CorrodedMetal", color = "#5A3A28" } }
+	elseif kind == "manhole" then
+		return { { name = "Manhole", shape = "Cylinder", size = v(0.1, 3, 3), pos = v(0, 0, 0), rotZ = 90, material = "DiamondPlate", color = "#202024", canCollide = false } }
 	elseif kind == "bike_rack" then
 		return { part("Rack", v(5, 2.4, 0.3), v(0, 1.2, 0), "Metal", "#8C9099", { canCollide = false }) }
 	elseif kind == "billboard" then

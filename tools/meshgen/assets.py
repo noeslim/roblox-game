@@ -5,6 +5,7 @@ combination fits together)."""
 import math
 import random
 
+import phaven as ph
 from lib import begin_asset, box, cyl, extrude, lathe, leaf, neon_text, tube
 
 
@@ -115,12 +116,17 @@ def workbench_basic():
     cyl(0.04, 0.5, (-0.5, 1.4, -1.33), "paint_red", bev=0.01)
     cyl(0.012, 0.3, (-0.5, 1.75, -1.33), "metal_steel", bev=0)
     tube([(0.4, 1.9, -1.34), (0.4, 1.3, -1.34), (1.2, 1.3, -1.34), (1.2, 1.9, -1.34)], 0.02, "metal_steel")
-    # vise
-    box((0.7, 0.18, 0.5), (2.1, 0.99, 0.95), "paint_green", bev=0.03)
-    box((0.7, 0.35, 0.18), (2.1, 1.25, 0.8), "paint_green", bev=0.03)
-    box((0.7, 0.35, 0.18), (2.1, 1.25, 1.2), "paint_green", bev=0.03)
-    cyl(0.05, 0.9, (2.1, 1.2, 1.55), "metal_steel", axis="z", bev=0.01)
-    cyl(0.025, 0.5, (2.1, 1.2, 1.95), "metal_steel", axis="x", bev=0.005)
+    # vise (a real one when the Poly Haven models are there), drill and spray cans at the back
+    if ph.has("vice"):
+        ph.place("vice", (2.1, 0.9, 0.75))
+        ph.place("drill", (-1.5, 0.9, -0.95), yaw=35)
+        ph.place("spray_cans", (2.6, 0.9, -1.05))
+    else:
+        box((0.7, 0.18, 0.5), (2.1, 0.99, 0.95), "paint_green", bev=0.03)
+        box((0.7, 0.35, 0.18), (2.1, 1.25, 0.8), "paint_green", bev=0.03)
+        box((0.7, 0.35, 0.18), (2.1, 1.25, 1.2), "paint_green", bev=0.03)
+        cyl(0.05, 0.9, (2.1, 1.2, 1.55), "metal_steel", axis="z", bev=0.01)
+        cyl(0.025, 0.5, (2.1, 1.2, 1.95), "metal_steel", axis="x", bev=0.005)
     # lamp
     cyl(0.18, 0.08, (-2.4, 0.94, -1.1), "metal_black", bev=0.02)
     tube([(-2.4, 0.95, -1.1), (-2.4, 1.7, -0.9), (-2.0, 1.95, -0.5)], 0.03, "metal_black")
@@ -131,8 +137,11 @@ def workbench_basic():
     for i in range(5):
         box((0.3, 0.06, 0.12), (0.6 + i * 0.12, 0.93, -0.2 + (i % 2) * 0.2), "metal_gun", bev=0.01, segs=1, rot=(0, i * 23, 0))
     # toolbox on the lower shelf
-    box((1.4, 0.6, 0.6), (1.5, -1.1, 0.4), "paint_red", bev=0.05)
-    tube([(1.1, -0.8, 0.4), (1.15, -0.62, 0.4), (1.85, -0.62, 0.4), (1.9, -0.8, 0.4)], 0.03, "metal_black")
+    if ph.has("tool_chest"):
+        ph.fit("tool_chest", (1.8, 1.3, 1.0), (1.5, -1.4, 0.4))
+    else:
+        box((1.4, 0.6, 0.6), (1.5, -1.1, 0.4), "paint_red", bev=0.05)
+        tube([(1.1, -0.8, 0.4), (1.15, -0.62, 0.4), (1.85, -0.62, 0.4), (1.9, -0.8, 0.4)], 0.03, "metal_black")
     box((0.9, 0.5, 0.7), (-1.6, -1.15, -0.5), "wood_crate", bev=0.03)
 
 
@@ -223,6 +232,9 @@ def safe():
 @buildable
 def couch():
     # size 6 x 3 x 3, floor at y = -1.5
+    if ph.has("sofa"):
+        ph.fit("sofa", (6, 3, 3), (0, -1.5, 0))
+        return
     box((6, 0.55, 2.8), (0, -0.95, -0.05), "fabric_dark", bev=0.12, segs=3)
     for sx in (-2.7, 2.7):
         for sz in (-1.2, 1.1):
